@@ -48,7 +48,7 @@ unsafe fn run_code<I, O>(jit: &mut jit::JIT, code: &str, input: I) -> Result<O, 
     // Cast the raw pointer to a typed function pointer. This is unsafe, because
     // this is the critical point where you have to trust that the generated code
     // is safe to be called.
-    let code_fn = mem::transmute::<_, fn(I) -> O>(code_ptr);
+    let code_fn = mem::transmute::<*const u8, fn(I) -> O>(code_ptr);
     // And now we can call it!
     Ok(code_fn(input))
 }

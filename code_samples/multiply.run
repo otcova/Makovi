@@ -1,0 +1,9 @@
+function multiply(a, b)
+  if a < b
+    return multiply(b, a)
+
+  iterations = b
+  while iterations > 1
+    a += b
+    iterations -= 1
+  return a
