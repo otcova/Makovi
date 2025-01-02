@@ -1,33 +1,21 @@
-if
-| Lt(0, 1)
-| (A)
-| | Identifier("a")
-| (B)
-| | Identifier("b")
-then
-| result =
-else
-| iterations =
-| | Identifier("b")
-| WhileLoop(12, 22)
-| (A)
-| | Gt(10, 11)
-| | (A)
-| | | Identifier("iterations")
-| | (B)
-| | | Literal("1")
-| (B)
-| | a =
-| | | Add(13, 14)
-| | | (A)
+function multiply("a", "b") -> "result"
+| if Lt
+| | (Lhs) Identifier("a")
+| | (Rhs) Identifier("b")
+| then
+| | result = multiply(...)
+| | | | Identifier("b")
 | | | | Identifier("a")
-| | | (B)
-| | | | Identifier("a")
-| | iterations =
-| | | Sub(17, 18)
-| | | (A)
-| | | | Identifier("iterations")
-| | | (B)
-| | | | Literal("1")
-| result =
-| | Identifier("a")
+| else
+| | iterations = Identifier("b")
+| | while Gt
+| | | (Lhs) Identifier("iterations")
+| | | (Rhs) Literal("1")
+| | then
+| | | a = Add
+| | | | (Lhs) Identifier("a")
+| | | | (Rhs) Identifier("a")
+| | | iterations = Sub
+| | | | (Lhs) Identifier("iterations")
+| | | | (Rhs) Literal("1")
+| | result = Identifier("a")

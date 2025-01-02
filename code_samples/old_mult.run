@@ -1,4 +1,4 @@
-function multiply(a, b) -> (result) {
+function multiply(a, b) -> result {
   if a < b {
     result = multiply(b, a)
   } else {

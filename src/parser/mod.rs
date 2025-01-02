@@ -7,11 +7,7 @@ use peg_parser::parser;
 pub struct ParserContext {}
 
 impl ParserContext {
-    pub fn parse<'c>(
-        &'c self,
-        code: &'c str,
-        ast: &'c Ast<'c>,
-    ) -> Result<FunctionExpr<'c>, String> {
+    pub fn parse<'c>(&'c self, code: &'c str, ast: &'c Ast<'c>) -> Result<ExprPtr, String> {
         parser::function(code, ast).map_err(|e| format!("Parsing error: {}", e))
     }
 }
@@ -52,7 +48,7 @@ mod tests {
         if expected != parsed {
             println!("Expected:");
             println!("{expected}");
-            println!("");
+            println!();
             println!("But was:");
             println!("{parsed}");
             panic!();

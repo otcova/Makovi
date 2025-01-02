@@ -1,9 +1,10 @@
-use std::{cell::RefCell, fmt::Display, ops::Index};
+use std::{cell::RefCell, fmt::Display};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Expr<'a> {
     Literal(&'a str),
     Identifier(&'a str),
+    IdentifierDefinition(&'a str),
     Assign(&'a str, ExprPtr),
     Eq(ExprPtr, ExprPtr),
     Ne(ExprPtr, ExprPtr),
@@ -23,17 +24,13 @@ pub enum Expr<'a> {
     WhileLoop(ExprPtr, ExprVecPtr),
     Call(&'a str, ExprVecPtr),
     GlobalDataAddr(&'a str),
+    /// (function_name, parameters, return_name)
+    Function(&'a str, ExprPtr, ExprPtr, ExprPtr),
 
-    /// Linked list: (line, next_line)
+    /// Linked lists: (line, next_line)
     Statements(ExprPtr, ExprPtr),
-}
-
-#[derive(Debug)]
-pub struct FunctionExpr<'a> {
-    pub name: &'a str,
-    pub params_names: Vec<&'a str>,
-    pub return_name: &'a str,
-    pub statements: &'a Ast<'a>,
+    Parameters(ExprPtr, ExprPtr),
+    ParametersDefinition(ExprPtr, ExprPtr),
 }
 
 #[derive(Debug)]
@@ -48,9 +45,6 @@ impl Default for Ast<'_> {
         }
     }
 }
-
-// pub type VecExpr<'a> = smallvec::SmallVec<Expr<'a>, 2>;
-pub type VecExpr<'a> = Vec<Expr<'a>>;
 
 pub type ExprPtr = u32;
 pub type ExprVecPtr = u32;
@@ -79,7 +73,7 @@ impl<'a> Ast<'a> {
         self.nodes.borrow_mut().clear();
     }
 
-    fn get(&self, index: ExprPtr) -> Expr<'a> {
+    pub fn get(&self, index: ExprPtr) -> Expr<'a> {
         self.nodes.borrow()[index as usize]
     }
 
@@ -88,49 +82,74 @@ impl<'a> Ast<'a> {
         f: &mut std::fmt::Formatter<'_>,
         expr: ExprPtr,
         indent: usize,
+        start_with_prefix: bool,
     ) -> std::fmt::Result {
         if expr == NULL_EXPR_PTR {
             return Ok(());
         }
 
-        let i = "| ".repeat(indent);
+        let ind = &"| ".repeat(indent);
+        let prefix = if start_with_prefix { ind } else { "" };
 
         match self.get(expr) {
+            Expr::Function(name, parameters, return_name, body) => {
+                write!(f, "{prefix}function {name}(")?;
+                self.print_ast(f, parameters, indent + 2, false)?;
+                write!(f, ") -> ")?;
+                self.print_ast(f, return_name, indent + 2, false)?;
+                writeln!(f)?;
+                self.print_ast(f, body, indent + 1, true)?;
+            }
             Expr::IfElse(condition, body, else_body) => {
-                writeln!(f, "{i}if")?;
-                self.print_ast(f, condition, indent + 1)?;
-                writeln!(f, "{i}then")?;
-                self.print_ast(f, body, indent + 1)?;
-                writeln!(f, "{i}else")?;
-                self.print_ast(f, else_body, indent + 1)?;
+                write!(f, "{prefix}if ")?;
+                self.print_ast(f, condition, indent + 1, false)?;
+                writeln!(f, "{ind}then")?;
+                self.print_ast(f, body, indent + 1, true)?;
+                writeln!(f, "{ind}else")?;
+                self.print_ast(f, else_body, indent + 1, true)?;
             }
             Expr::IfElseIf(condition, body, else_body) => {
-                writeln!(f, "{i}if")?;
-                self.print_ast(f, condition, indent + 1)?;
-                writeln!(f, "{i}then")?;
-                self.print_ast(f, body, indent + 1)?;
-                writeln!(f, "{i}else")?;
-                self.print_ast(f, else_body, indent)?;
+                write!(f, "{prefix}if ")?;
+                self.print_ast(f, condition, indent + 1, false)?;
+                writeln!(f, "{ind}then")?;
+                self.print_ast(f, body, indent + 1, true)?;
+                write!(f, "{ind}else ")?;
+                self.print_ast(f, else_body, indent, false)?;
             }
-            // Code Block
-            Expr::Statements(current, next) => {
-                self.print_ast(f, current, indent)?;
-                self.print_ast(f, next, indent)?;
+            Expr::WhileLoop(condition, body) => {
+                write!(f, "{prefix}while ")?;
+                self.print_ast(f, condition, indent + 1, false)?;
+                writeln!(f, "{ind}then")?;
+                self.print_ast(f, body, indent + 1, true)?;
             }
-            // 0 childs
-            Expr::Literal(..) | Expr::Identifier(..) | Expr::GlobalDataAddr(..) => {
-                writeln!(f, "{i}{:?}", self.get(expr))?;
+            Expr::ParametersDefinition(current, next) => {
+                self.print_ast(f, current, indent, start_with_prefix)?;
+                if next != NULL_EXPR_PTR {
+                    write!(f, ", ")?;
+                    self.print_ast(f, next, indent, false)?;
+                }
             }
-            // 1 child
+            Expr::Parameters(current, next) | Expr::Statements(current, next) => {
+                self.print_ast(f, current, indent, true)?;
+                self.print_ast(f, next, indent, true)?;
+            }
             Expr::Assign(name, expr) => {
-                writeln!(f, "{i}{name} = ")?;
-                self.print_ast(f, expr, indent + 1)?;
+                write!(f, "{prefix}{name} = ")?;
+                self.print_ast(f, expr, indent + 1, false)?;
             }
-            // 1 vec child
             Expr::Call(fn_name, args) => {
-                writeln!(f, "{i}{fn_name}(...)")?;
+                writeln!(f, "{prefix}{fn_name}(...)")?;
+                self.print_ast(f, args, indent + 1, true)?;
             }
-            // 2 childs
+            Expr::IdentifierDefinition(name) => {
+                write!(f, r#"{prefix}"{name}""#)?;
+                if start_with_prefix {
+                    writeln!(f)?;
+                }
+            }
+            Expr::Literal(..) | Expr::Identifier(..) | Expr::GlobalDataAddr(..) => {
+                writeln!(f, "{prefix}{:?}", self.get(expr))?;
+            }
             Expr::Eq(a, b)
             | Expr::Ne(a, b)
             | Expr::Lt(a, b)
@@ -141,13 +160,13 @@ impl<'a> Ast<'a> {
             | Expr::Sub(a, b)
             | Expr::Mul(a, b)
             | Expr::Div(a, b)
-            | Expr::Mod(a, b)
-            | Expr::WhileLoop(a, b) => {
-                writeln!(f, "{i}{:?}", self.get(expr))?;
-                writeln!(f, "{i}(A)")?;
-                self.print_ast(f, a, indent + 1)?;
-                writeln!(f, "{i}(B)")?;
-                self.print_ast(f, b, indent + 1)?;
+            | Expr::Mod(a, b) => {
+                let name = format!("{:?}", self.get(expr));
+                writeln!(f, "{prefix}{}", name.split('(').next().unwrap())?;
+                write!(f, "{ind}(Lhs) ")?;
+                self.print_ast(f, a, indent + 1, false)?;
+                write!(f, "{ind}(Rhs) ")?;
+                self.print_ast(f, b, indent + 1, false)?;
             }
         };
 
@@ -158,6 +177,6 @@ impl<'a> Ast<'a> {
 impl Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let last = (self.nodes.borrow().len() - 1) as ExprPtr;
-        self.print_ast(f, last, 0)
+        self.print_ast(f, last, 0, true)
     }
 }
