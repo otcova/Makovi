@@ -12,6 +12,17 @@ fn bench_big_function(b: &mut Bencher) {
     let parser = ParserContext::default();
 
     b.iter(|| parser.parse(source, &arena).unwrap());
+
+    // panic!(
+    //     "{:?}",
+    //     parser
+    //         .parse(source, &arena)
+    //         .unwrap()
+    //         .statements
+    //         .nodes
+    //         .borrow()
+    //         .len()
+    // );
 }
 
 /*

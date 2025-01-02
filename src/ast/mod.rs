@@ -4,27 +4,28 @@ use std::cell::RefCell;
 pub enum Expr<'a> {
     Literal(&'a str),
     Identifier(&'a str),
-    Assign(&'a str, ExprPtr<'a>),
-    Eq(ExprPtr<'a>, ExprPtr<'a>),
-    Ne(ExprPtr<'a>, ExprPtr<'a>),
-    Lt(ExprPtr<'a>, ExprPtr<'a>),
-    Le(ExprPtr<'a>, ExprPtr<'a>),
-    Gt(ExprPtr<'a>, ExprPtr<'a>),
-    Ge(ExprPtr<'a>, ExprPtr<'a>),
-    Add(ExprPtr<'a>, ExprPtr<'a>),
-    Sub(ExprPtr<'a>, ExprPtr<'a>),
-    Mul(ExprPtr<'a>, ExprPtr<'a>),
-    Div(ExprPtr<'a>, ExprPtr<'a>),
-    Mod(ExprPtr<'a>, ExprPtr<'a>),
+    Assign(&'a str, ExprPtr),
+    Eq(ExprPtr, ExprPtr),
+    Ne(ExprPtr, ExprPtr),
+    Lt(ExprPtr, ExprPtr),
+    Le(ExprPtr, ExprPtr),
+    Gt(ExprPtr, ExprPtr),
+    Ge(ExprPtr, ExprPtr),
+    Add(ExprPtr, ExprPtr),
+    Sub(ExprPtr, ExprPtr),
+    Mul(ExprPtr, ExprPtr),
+    Div(ExprPtr, ExprPtr),
+    Mod(ExprPtr, ExprPtr),
     /// (if_condition, if_body, else_body)
-    IfElse(ExprPtr<'a>, ExprVecPtr<'a>, ExprVecPtr<'a>),
+    IfElse(ExprPtr, ExprVecPtr, ExprVecPtr),
     /// (if_condition, if_body, if_else_expresion)
-    IfElseIf(ExprPtr<'a>, ExprVecPtr<'a>, ExprPtr<'a>),
-    WhileLoop(ExprPtr<'a>, ExprVecPtr<'a>),
-    Call(&'a str, ExprVecPtr<'a>),
+    IfElseIf(ExprPtr, ExprVecPtr, ExprPtr),
+    WhileLoop(ExprPtr, ExprVecPtr),
+    Call(&'a str, ExprVecPtr),
     GlobalDataAddr(&'a str),
 }
 
+#[derive(Debug)]
 pub struct FunctionExpr<'a> {
     pub name: &'a str,
     pub params_names: Vec<&'a str>,
@@ -32,8 +33,9 @@ pub struct FunctionExpr<'a> {
     pub statements: &'a Ast<'a>,
 }
 
+#[derive(Debug)]
 pub struct Ast<'a> {
-    nodes: RefCell<Vec<Expr<'a>>>,
+    pub nodes: RefCell<Vec<Expr<'a>>>,
 }
 
 impl Default for Ast<'_> {
@@ -53,22 +55,22 @@ impl Ast<'_> {
 // pub type VecExpr<'a> = smallvec::SmallVec<Expr<'a>, 2>;
 pub type VecExpr<'a> = Vec<Expr<'a>>;
 
-type ExprPtr<'a> = u32;
-type ExprVecPtr<'a> = u32;
+pub type ExprPtr = u32;
+pub type ExprVecPtr = u32;
 
 impl<'a> Ast<'a> {
-    pub fn push(&self, expr: Expr<'a>) -> ExprPtr<'a> {
+    pub fn push(&self, expr: Expr<'a>) -> ExprPtr {
         let mut data = self.nodes.borrow_mut();
         data.push(expr);
         (data.len() - 1) as ExprPtr
     }
 
-    pub fn push_all(&self, exprs: &[Expr<'a>]) -> ExprVecPtr<'a> {
+    pub fn push_all(&self, exprs: &[Expr<'a>]) -> ExprVecPtr {
         self.nodes.borrow_mut().extend_from_slice(exprs);
         exprs.len() as ExprPtr
     }
 
-    pub fn push_vec(&self, mut exprs: Vec<Expr<'a>>) -> ExprVecPtr<'a> {
+    pub fn push_vec(&self, mut exprs: Vec<Expr<'a>>) -> ExprVecPtr {
         let len = exprs.len();
 
         self.nodes.borrow_mut().append(&mut exprs);
