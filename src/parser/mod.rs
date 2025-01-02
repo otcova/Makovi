@@ -10,8 +10,26 @@ impl ParserContext {
     pub fn parse<'c>(
         &'c self,
         code: &'c str,
-        arena: &'c Ast<'c>,
+        ast: &'c Ast<'c>,
     ) -> Result<FunctionExpr<'c>, String> {
-        parser::function(code, arena).map_err(|e| format!("Parsing error: {}", e))
+        parser::function(code, ast).map_err(|e| format!("Parsing error: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse() {
+        let code = include_str!("../../code_samples/smallest_factor.run");
+        let expected = include_str!("../../code_samples/smallest_factor.ast.rs").trim();
+
+        let ast = Ast::default();
+        let ctx = ParserContext::default();
+
+        ctx.parse(code, &ast).unwrap();
+
+        assert_eq!(expected, &format!("{:?}", ast.nodes));
     }
 }
