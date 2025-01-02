@@ -16,38 +16,19 @@ impl ParserContext {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-
     use super::*;
+    use crate::test_utils::*;
 
-    macro_rules! gen_test {
-        ($($name:ident)*) => {$(
-            #[test]
-            fn $name() {
-                parse(stringify!($name));
-            }
-        )*};
-    }
-
-    gen_test! {
-        old_mult
-        smallest_factor
-    }
-
-    fn parse(name: &str) {
-        let code = &fs::read_to_string(format!("code_samples/{name}.run")).unwrap();
-        let expected =
-            fs::read_to_string(format!("code_samples/{name}.ast.run")).unwrap_or_default();
-        let expected = expected.trim();
-
+    gen_tests! {
+    fn(b, code, test_name) {
         let ast = Ast::default();
-        let ctx = ParserContext::default();
+        let parser = ParserContext::default();
 
-        ctx.parse(code, &ast).unwrap();
+        parser.parse(code, &ast).unwrap();
         let parsed = format!("{}", ast);
-        let parsed = parsed.trim();
 
-        if expected != parsed {
+        let expected = &load_src(test_name, ".ast");
+        if expected.trim() != parsed.trim() {
             println!("Expected:");
             println!("{expected}");
             println!();
@@ -55,5 +36,10 @@ mod tests {
             println!("{parsed}");
             panic!();
         }
-    }
+
+        b.iter(|| {
+            ast.clear();
+            parser.parse(code, &ast).unwrap()
+        });
+    }}
 }

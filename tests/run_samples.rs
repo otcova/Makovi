@@ -21,6 +21,6 @@ gen_tests! {
 
 fn test_function<I, O: Eq + Debug>(fn_source: &str, input: I, expected_output: O) {
     let mut jit = MakoviJIT::<I, O>::default();
-    jit.load_function(fn_source).unwrap();
+    jit.load_code(fn_source).unwrap();
     assert_eq!(expected_output, jit.run_code(input));
 }

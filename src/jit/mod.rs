@@ -42,6 +42,11 @@ impl Default for JIT {
 }
 
 impl JIT {
+    pub fn gen_ir<'a>(&mut self, ast: &'a Ast<'a>) -> Result<String, String> {
+        self.code.load(ast)?;
+        Ok(self.code.write_ir())
+    }
+
     /// Compile a string in the toy language into machine code.
     pub fn compile<'a>(&mut self, ast: &'a Ast<'a>) -> Result<*const u8, String> {
         let id = self.code.load(ast)?;
