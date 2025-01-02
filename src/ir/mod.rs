@@ -1,10 +1,10 @@
-mod function_translator;
+mod control_flow;
+mod translations;
 
-use crate::ast::*;
-use codegen::Context;
+use crate::parser::*;
+use codegen::{write_function, Context};
 use cranelift::prelude::*;
 use cranelift_module::{FuncId, Linkage, Module};
-use function_translator::FunctionTranslator;
 use std::collections::HashMap;
 
 pub struct CodeIR<M: Module> {
@@ -13,11 +13,43 @@ pub struct CodeIR<M: Module> {
     pub builder_context: FunctionBuilderContext,
 }
 
+pub struct FunctionTranslator<'a, 'b, M: Module> {
+    pub int: types::Type,
+    pub builder: FunctionBuilder<'b>,
+    pub variables: HashMap<String, Variable>,
+    pub module: &'b mut M,
+    pub ast: &'a Ast<'a>,
+}
+
+type ExprValue = Option<Value>;
+
 impl<M: Module> CodeIR<M> {
-    pub fn load_function(&mut self, function: FunctionAST) -> Result<FuncId, String> {
+    pub fn write_ir(&self) -> String {
+        let mut ir = String::new();
+        write_function(&mut ir, &self.ctx.func).unwrap();
+        ir
+    }
+
+    pub fn load<'a>(&mut self, ast: &'a Ast<'a>) -> Result<FuncId, String> {
+        match ast.root().unwrap() {
+            Expr::Function(name, params, return_name, body) => {
+                self.load_function(ast, name, params, return_name, body)
+            }
+            _ => Err("Expected a single top function".to_owned()),
+        }
+    }
+
+    fn load_function<'a>(
+        &mut self,
+        ast: &'a Ast<'a>,
+        function_name: &str,
+        params: u32,
+        return_node: u32,
+        function_body: u32,
+    ) -> Result<FuncId, String> {
         let int = types::I64;
 
-        for _ in &function.params_names {
+        for _ in ast.iter_list(params) {
             self.ctx
                 .func
                 .signature
@@ -49,33 +81,41 @@ impl<M: Module> CodeIR<M> {
         // predecessors.
         builder.seal_block(entry_block);
 
+        let params_names = ast.iter_list(params).map(|expr| match expr {
+            Expr::IdentifierDefinition(name) => name,
+            _ => unreachable!(),
+        });
+
+        let return_name = match ast.get(return_node) {
+            Expr::IdentifierDefinition(name) => name,
+            _ => unreachable!(),
+        };
+
         // The toy language allows variables to be declared implicitly.
         // Walk the AST and declare all implicitly-declared variables.
         let variables = declare_variables(
             int,
             &mut builder,
-            &function.params_names,
-            &function.return_name,
-            &function.statements,
+            params_names,
+            return_name,
+            ast.nodes.borrow().iter().copied(),
             entry_block,
         );
 
-        // Now translate the statements of the function body.
         let mut trans = FunctionTranslator {
             int,
             builder,
             variables,
             module: &mut self.module,
+            ast,
         };
 
-        for expr in function.statements {
-            trans.translate_expr(expr);
-        }
+        trans.translate(function_body);
 
         // Set up the return variable of the function. Above, we declared a
         // variable to hold the return value. Here, we just do a use of that
         // variable.
-        let return_variable = trans.variables.get(&function.return_name).unwrap();
+        let return_variable = trans.variables.get(return_name).unwrap();
         let return_value = trans.builder.use_var(*return_variable);
 
         // Emit the return instruction.
@@ -92,25 +132,25 @@ impl<M: Module> CodeIR<M> {
         // the function?
         let id = self
             .module
-            .declare_function(&function.name, Linkage::Export, &self.ctx.func.signature)
+            .declare_function(function_name, Linkage::Export, &self.ctx.func.signature)
             .map_err(|e| format!("Compilation error: {}", e))?;
 
         Ok(id)
     }
 }
 
-fn declare_variables(
+fn declare_variables<'a>(
     int: types::Type,
     builder: &mut FunctionBuilder,
-    params: &[String],
+    params: impl Iterator<Item = &'a str>,
     the_return: &str,
-    stmts: &[Expr],
+    function_body: impl Iterator<Item = Expr<'a>> + 'a,
     entry_block: Block,
 ) -> HashMap<String, Variable> {
     let mut variables = HashMap::new();
     let mut index = 0;
 
-    for (i, name) in params.iter().enumerate() {
+    for (i, name) in params.enumerate() {
         // TODO: cranelift_frontend should really have an API to make it easy to set
         // up param variables.
         let val = builder.block_params(entry_block)[i];
@@ -120,41 +160,14 @@ fn declare_variables(
     let zero = builder.ins().iconst(int, 0);
     let return_variable = declare_variable(int, builder, &mut variables, &mut index, the_return);
     builder.def_var(return_variable, zero);
-    for expr in stmts {
-        declare_variables_in_stmt(int, builder, &mut variables, &mut index, expr);
+
+    for expr in function_body {
+        if let Expr::Assign(name, _) = expr {
+            declare_variable(int, builder, &mut variables, &mut index, name);
+        }
     }
 
     variables
-}
-
-/// Recursively descend through the AST, translating all implicit
-/// variable declarations.
-fn declare_variables_in_stmt(
-    int: types::Type,
-    builder: &mut FunctionBuilder,
-    variables: &mut HashMap<String, Variable>,
-    index: &mut usize,
-    expr: &Expr,
-) {
-    match *expr {
-        Expr::Assign(ref name, _) => {
-            declare_variable(int, builder, variables, index, name);
-        }
-        Expr::IfElse(ref _condition, ref then_body, ref else_body) => {
-            for stmt in then_body {
-                declare_variables_in_stmt(int, builder, variables, index, stmt);
-            }
-            for stmt in else_body {
-                declare_variables_in_stmt(int, builder, variables, index, stmt);
-            }
-        }
-        Expr::WhileLoop(ref _condition, ref loop_body) => {
-            for stmt in loop_body {
-                declare_variables_in_stmt(int, builder, variables, index, stmt);
-            }
-        }
-        _ => (),
-    }
 }
 
 /// Declare a single variable declaration.

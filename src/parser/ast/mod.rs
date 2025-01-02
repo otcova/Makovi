@@ -19,8 +19,6 @@ pub enum Expr<'a> {
     Mod(ExprPtr, ExprPtr),
     /// (if_condition, if_body, else_body)
     IfElse(ExprPtr, ExprVecPtr, ExprVecPtr),
-    /// (if_condition, if_body, if_else_expresion)
-    IfElseIf(ExprPtr, ExprVecPtr, ExprPtr),
     WhileLoop(ExprPtr, ExprVecPtr),
     Call(&'a str, ExprVecPtr),
     GlobalDataAddr(&'a str),
@@ -42,6 +40,30 @@ impl Default for Ast<'_> {
     fn default() -> Self {
         Self {
             nodes: RefCell::new(Vec::with_capacity(256)),
+        }
+    }
+}
+
+struct AstList<'a> {
+    ast: &'a Ast<'a>,
+    node: ExprPtr,
+}
+
+impl<'a> Iterator for AstList<'a> {
+    type Item = Expr<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.node == NULL_EXPR_PTR {
+            return None;
+        }
+
+        match self.ast.get(self.node) {
+            Expr::Statements(expr, next)
+            | Expr::Parameters(expr, next)
+            | Expr::ParametersDefinition(expr, next) => {
+                self.node = next;
+                Some(self.ast.get(expr))
+            }
+            _ => None,
         }
     }
 }
@@ -77,6 +99,14 @@ impl<'a> Ast<'a> {
         self.nodes.borrow()[index as usize]
     }
 
+    pub fn root(&self) -> Option<Expr<'a>> {
+        self.nodes.borrow().last().copied()
+    }
+
+    pub fn iter_list(&'a self, node: ExprPtr) -> impl Iterator<Item = Expr<'a>> {
+        AstList { ast: self, node }
+    }
+
     fn print_ast(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -105,16 +135,13 @@ impl<'a> Ast<'a> {
                 self.print_ast(f, condition, indent + 1, false)?;
                 writeln!(f, "{ind}then")?;
                 self.print_ast(f, body, indent + 1, true)?;
-                writeln!(f, "{ind}else")?;
-                self.print_ast(f, else_body, indent + 1, true)?;
-            }
-            Expr::IfElseIf(condition, body, else_body) => {
-                write!(f, "{prefix}if ")?;
-                self.print_ast(f, condition, indent + 1, false)?;
-                writeln!(f, "{ind}then")?;
-                self.print_ast(f, body, indent + 1, true)?;
-                write!(f, "{ind}else ")?;
-                self.print_ast(f, else_body, indent, false)?;
+                if let Expr::IfElse(..) = self.get(else_body) {
+                    write!(f, "{ind}else ")?;
+                    self.print_ast(f, else_body, indent, false)?;
+                } else {
+                    writeln!(f, "{ind}else")?;
+                    self.print_ast(f, else_body, indent + 1, true)?;
+                }
             }
             Expr::WhileLoop(condition, body) => {
                 write!(f, "{prefix}while ")?;
@@ -176,7 +203,7 @@ impl<'a> Ast<'a> {
 
 impl Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let last = (self.nodes.borrow().len() - 1) as ExprPtr;
-        self.print_ast(f, last, 0, true)
+        let root = (self.nodes.borrow().len() - 1) as ExprPtr;
+        self.print_ast(f, root, 0, true)
     }
 }

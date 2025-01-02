@@ -1,14 +1,12 @@
-// #![feature(libstd_sys_internals, rt)]
-
-pub mod ast;
+pub mod ir;
+pub mod jit;
 pub mod parser;
-//pub mod ir;
-//pub mod jit;
-/*
-use ast::FunctionAST;
+
 use jit::*;
+use parser::*;
 
 pub struct MakoviJIT<In, Out> {
+    parser: ParserContext,
     jit: JIT,
     fn_ptr: fn(In) -> Out,
 }
@@ -17,6 +15,7 @@ impl<In, Out> Default for MakoviJIT<In, Out> {
     fn default() -> Self {
         MakoviJIT {
             jit: JIT::default(),
+            parser: ParserContext::default(),
             fn_ptr: |_| panic!("Function not loaded!"),
         }
     }
@@ -24,9 +23,9 @@ impl<In, Out> Default for MakoviJIT<In, Out> {
 
 impl<In, Out> MakoviJIT<In, Out> {
     pub fn load_function(&mut self, code: &str) -> Result<(), String> {
-        let function_ast = FunctionAST::parse(code)?;
-
-        let ptr = self.jit.compile_function(function_ast)?;
+        let ast = Ast::default();
+        self.parser.parse(code, &ast)?;
+        let ptr = self.jit.compile(&ast)?;
 
         unsafe {
             self.fn_ptr = std::mem::transmute::<*const u8, fn(In) -> Out>(ptr);
@@ -38,4 +37,3 @@ impl<In, Out> MakoviJIT<In, Out> {
         (self.fn_ptr)(input)
     }
 }
-*/

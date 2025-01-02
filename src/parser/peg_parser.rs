@@ -1,4 +1,4 @@
-use crate::ast::*;
+use super::*;
 
 peg::parser!(pub grammar parser(arena: &'input Ast<'input>) for str {
     pub rule function() -> ExprPtr
@@ -40,7 +40,7 @@ peg::parser!(pub grammar parser(arena: &'input Ast<'input>) for str {
         "if" _ condition:expression() _ "{" _ "\n"
             body:statements() _
         "}" _ "else" _ if_else:if_statement()
-        { arena.push(Expr::IfElseIf(condition, body, if_else)) }
+        { arena.push(Expr::IfElse(condition, body, if_else)) }
 
     rule while_loop() -> ExprPtr =
         "while" _ e:expression() _ "{" _ "\n" body:statements() _ "}"

@@ -1,14 +1,16 @@
+mod ast;
 mod peg_parser;
 
-use crate::ast::*;
+pub use ast::*;
 use peg_parser::parser;
 
 #[derive(Default)]
 pub struct ParserContext {}
 
 impl ParserContext {
-    pub fn parse<'c>(&'c self, code: &'c str, ast: &'c Ast<'c>) -> Result<ExprPtr, String> {
-        parser::function(code, ast).map_err(|e| format!("Parsing error: {}", e))
+    pub fn parse<'c>(&'c self, code: &'c str, ast: &'c Ast<'c>) -> Result<(), String> {
+        parser::function(code, ast).map_err(|e| format!("Parsing error: {}", e))?;
+        Ok(())
     }
 }
 

@@ -1,5 +1,5 @@
-use crate::ast::*;
 use crate::ir::*;
+use crate::parser::*;
 use cranelift::prelude::*;
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{DataDescription, Linkage, Module};
@@ -43,8 +43,8 @@ impl Default for JIT {
 
 impl JIT {
     /// Compile a string in the toy language into machine code.
-    pub fn compile_function(&mut self, function: FunctionAST) -> Result<*const u8, String> {
-        let id = self.code.load_function(function)?;
+    pub fn compile<'a>(&mut self, ast: &'a Ast<'a>) -> Result<*const u8, String> {
+        let id = self.code.load(ast)?;
 
         // Define the function to jit. This finishes compilation, although
         // there may be outstanding relocations to perform. Currently, jit
