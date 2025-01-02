@@ -29,7 +29,7 @@ mod tests {
 
     gen_test! {
         old_mult
-        // smallest_factor
+        smallest_factor
     }
 
     fn parse(name: &str) {

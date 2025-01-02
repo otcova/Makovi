@@ -1,0 +1,142 @@
+function smallest_factor("number") -> "factor"
+| if Eq
+| | (Lhs) Mod
+| | | (Lhs) Identifier("number")
+| | | (Rhs) Literal("2")
+| | (Rhs) Literal("0")
+| then
+| | factor = Literal("2")
+| else if Eq
+| | (Lhs) Mod
+| | | (Lhs) Identifier("number")
+| | | (Rhs) Literal("3")
+| | (Rhs) Literal("0")
+| then
+| | factor = Literal("3")
+| else if Eq
+| | (Lhs) Mod
+| | | (Lhs) Identifier("number")
+| | | (Rhs) Literal("5")
+| | (Rhs) Literal("0")
+| then
+| | factor = Literal("5")
+| else
+| | factor = Literal("7")
+| | break = Literal("0")
+| | while Eq
+| | | (Lhs) Identifier("break")
+| | | (Rhs) Literal("0")
+| | then
+| | | if Gt
+| | | | (Lhs) Identifier("factor")
+| | | | (Rhs) Identifier("number")
+| | | then
+| | | | factor = Identifier("number")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Identifier("factor")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("3")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("3")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("6")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("6")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("10")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("10")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("12")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("12")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("16")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("16")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("22")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("22")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("24")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("24")
+| | | | break = Literal("1")
+| | | else if Eq
+| | | | (Lhs) Mod
+| | | | | (Lhs) Identifier("number")
+| | | | | (Rhs) Add
+| | | | | | (Lhs) Identifier("factor")
+| | | | | | (Rhs) Literal("30")
+| | | | (Rhs) Literal("0")
+| | | then
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("30")
+| | | | break = Literal("1")
+| | | else
+| | | | factor = Add
+| | | | | (Lhs) Identifier("factor")
+| | | | | (Rhs) Literal("30")
