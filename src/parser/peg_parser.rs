@@ -33,13 +33,15 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
     rule statements() = statement() statements() / _()
     rule statement() = _ e:expression() _ "\n" { arena.push(e); }
 
-    rule expression() -> Expr<'input>
-        = if_else()
+    rule expression() -> Expr<'input> =
+        if_statement()
         / while_loop()
         / assignment()
         / binary_op()
 
-    rule if_else() -> Expr<'input> = precedence! {
+    rule if_statement() -> Expr<'input> = if_else() / if_else_if()
+
+    rule if_else() -> Expr<'input> =
         "if" _ e:expression() _ "{" _ "\n"
             statements() _
         "}" _ "else" _ "{" _ "\n"
@@ -47,11 +49,11 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
         "}"
         { Expr::IfElse(arena.push(e), 4, 3) }
 
+    rule if_else_if() -> Expr<'input> =
         "if" _ e:expression() _ "{" _ "\n"
             statements() _
-        "}" _ "else" _ else_body:if_else()
+        "}" _ "else" _ else_body:if_statement()
         { Expr::IfElseIf(arena.push(e), 2, arena.push(else_body)) }
-    }
 
     rule while_loop() -> Expr<'input> =
         "while" _ e:expression() _ "{" _ "\n" statements() _ "}"
