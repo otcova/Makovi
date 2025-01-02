@@ -6,7 +6,7 @@ extern crate std;
 pub mod ast {
 
     use std::ops::Index;
-    pub enum ExprAst {
+    pub enum Expr {
         Literal(String),
         Identifier(String),
         Assign(String, ExprPtr),
@@ -21,66 +21,66 @@ pub mod ast {
         Mul(ExprPtr, ExprPtr),
         Div(ExprPtr, ExprPtr),
         Mod(ExprPtr, ExprPtr),
-        IfElse(ExprPtr, Vec<ExprAst>, Vec<ExprAst>),
-        WhileLoop(ExprPtr, Vec<ExprAst>),
-        Call(String, Vec<ExprAst>),
+        IfElse(ExprPtr, Vec<Expr>, Vec<Expr>),
+        WhileLoop(ExprPtr, Vec<Expr>),
+        Call(String, Vec<Expr>),
         GlobalDataAddr(String),
     }
     #[automatically_derived]
-    impl ::core::fmt::Debug for ExprAst {
+    impl ::core::fmt::Debug for Expr {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
             match self {
-                ExprAst::Literal(__self_0) => {
+                Expr::Literal(__self_0) => {
                     ::core::fmt::Formatter::debug_tuple_field1_finish(f, "Literal", &__self_0)
                 }
-                ExprAst::Identifier(__self_0) => {
+                Expr::Identifier(__self_0) => {
                     ::core::fmt::Formatter::debug_tuple_field1_finish(f, "Identifier", &__self_0)
                 }
-                ExprAst::Assign(__self_0, __self_1) => {
+                Expr::Assign(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(
                         f, "Assign", __self_0, &__self_1,
                     )
                 }
-                ExprAst::Eq(__self_0, __self_1) => {
+                Expr::Eq(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Eq", __self_0, &__self_1)
                 }
-                ExprAst::Ne(__self_0, __self_1) => {
+                Expr::Ne(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Ne", __self_0, &__self_1)
                 }
-                ExprAst::Lt(__self_0, __self_1) => {
+                Expr::Lt(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Lt", __self_0, &__self_1)
                 }
-                ExprAst::Le(__self_0, __self_1) => {
+                Expr::Le(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Le", __self_0, &__self_1)
                 }
-                ExprAst::Gt(__self_0, __self_1) => {
+                Expr::Gt(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Gt", __self_0, &__self_1)
                 }
-                ExprAst::Ge(__self_0, __self_1) => {
+                Expr::Ge(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Ge", __self_0, &__self_1)
                 }
-                ExprAst::Add(__self_0, __self_1) => {
+                Expr::Add(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Add", __self_0, &__self_1)
                 }
-                ExprAst::Sub(__self_0, __self_1) => {
+                Expr::Sub(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Sub", __self_0, &__self_1)
                 }
-                ExprAst::Mul(__self_0, __self_1) => {
+                Expr::Mul(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Mul", __self_0, &__self_1)
                 }
-                ExprAst::Div(__self_0, __self_1) => {
+                Expr::Div(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Div", __self_0, &__self_1)
                 }
-                ExprAst::Mod(__self_0, __self_1) => {
+                Expr::Mod(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(f, "Mod", __self_0, &__self_1)
                 }
-                ExprAst::IfElse(__self_0, __self_1, __self_2) => {
+                Expr::IfElse(__self_0, __self_1, __self_2) => {
                     ::core::fmt::Formatter::debug_tuple_field3_finish(
                         f, "IfElse", __self_0, __self_1, &__self_2,
                     )
                 }
-                ExprAst::WhileLoop(__self_0, __self_1) => {
+                Expr::WhileLoop(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(
                         f,
                         "WhileLoop",
@@ -88,12 +88,12 @@ pub mod ast {
                         &__self_1,
                     )
                 }
-                ExprAst::Call(__self_0, __self_1) => {
+                Expr::Call(__self_0, __self_1) => {
                     ::core::fmt::Formatter::debug_tuple_field2_finish(
                         f, "Call", __self_0, &__self_1,
                     )
                 }
-                ExprAst::GlobalDataAddr(__self_0) => {
+                Expr::GlobalDataAddr(__self_0) => {
                     ::core::fmt::Formatter::debug_tuple_field1_finish(
                         f,
                         "GlobalDataAddr",
@@ -107,21 +107,21 @@ pub mod ast {
         pub name: String,
         pub params_names: Vec<String>,
         pub return_name: String,
-        pub statements: Vec<ExprAst>,
+        pub statements: Vec<Expr>,
     }
-    type ExprPtr = Box<ExprAst>;
-    pub struct ExprArena {
-        data: Vec<ExprAst>,
+    type ExprPtr = Box<Expr>;
+    pub struct Ast {
+        data: Vec<Expr>,
     }
-    impl Default for ExprArena {
+    impl Default for Ast {
         fn default() -> Self {
             Self {
                 data: Vec::with_capacity(32),
             }
         }
     }
-    impl ExprArena {
-        pub fn push(&self, expr: ExprAst) -> ExprPtr {
+    impl Ast {
+        pub fn push(&self, expr: Expr) -> ExprPtr {
             Box::new(expr)
         }
     }
@@ -143,80 +143,80 @@ pub mod ir {
         impl<M: Module> FunctionTranslator<'_, M> {
             /// When you write out instructions in Cranelift, you get back `Value`s. You
             /// can then use these references in other instructions.
-            pub fn translate_expr(&mut self, expr: ExprAst) -> Value {
+            pub fn translate_expr(&mut self, expr: Expr) -> Value {
                 match expr {
-                    ExprAst::Literal(literal) => {
+                    Expr::Literal(literal) => {
                         let imm: i32 = literal.parse().unwrap();
                         self.builder.ins().iconst(self.int, i64::from(imm))
                     }
-                    ExprAst::Add(lhs, rhs) => {
+                    Expr::Add(lhs, rhs) => {
                         let lhs = self.translate_expr(*lhs);
                         let rhs = self.translate_expr(*rhs);
                         self.builder.ins().iadd(lhs, rhs)
                     }
-                    ExprAst::Sub(lhs, rhs) => {
+                    Expr::Sub(lhs, rhs) => {
                         let lhs = self.translate_expr(*lhs);
                         let rhs = self.translate_expr(*rhs);
                         self.builder.ins().isub(lhs, rhs)
                     }
-                    ExprAst::Mul(lhs, rhs) => {
+                    Expr::Mul(lhs, rhs) => {
                         let lhs = self.translate_expr(*lhs);
                         let rhs = self.translate_expr(*rhs);
                         self.builder.ins().imul(lhs, rhs)
                     }
-                    ExprAst::Div(lhs, rhs) => {
+                    Expr::Div(lhs, rhs) => {
                         let lhs = self.translate_expr(*lhs);
                         let rhs = self.translate_expr(*rhs);
                         self.builder.ins().udiv(lhs, rhs)
                     }
-                    ExprAst::Mod(lhs, rhs) => {
+                    Expr::Mod(lhs, rhs) => {
                         let lhs = self.translate_expr(*lhs);
                         let rhs = self.translate_expr(*rhs);
                         self.builder.ins().urem(lhs, rhs)
                     }
-                    ExprAst::Eq(lhs, rhs) => self.translate_icmp(IntCC::Equal, *lhs, *rhs),
-                    ExprAst::Ne(lhs, rhs) => self.translate_icmp(IntCC::NotEqual, *lhs, *rhs),
-                    ExprAst::Lt(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThan, *lhs, *rhs),
-                    ExprAst::Le(lhs, rhs) => {
+                    Expr::Eq(lhs, rhs) => self.translate_icmp(IntCC::Equal, *lhs, *rhs),
+                    Expr::Ne(lhs, rhs) => self.translate_icmp(IntCC::NotEqual, *lhs, *rhs),
+                    Expr::Lt(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThan, *lhs, *rhs),
+                    Expr::Le(lhs, rhs) => {
                         self.translate_icmp(IntCC::SignedLessThanOrEqual, *lhs, *rhs)
                     }
-                    ExprAst::Gt(lhs, rhs) => {
+                    Expr::Gt(lhs, rhs) => {
                         self.translate_icmp(IntCC::SignedGreaterThan, *lhs, *rhs)
                     }
-                    ExprAst::Ge(lhs, rhs) => {
+                    Expr::Ge(lhs, rhs) => {
                         self.translate_icmp(IntCC::SignedGreaterThanOrEqual, *lhs, *rhs)
                     }
-                    ExprAst::Call(name, args) => self.translate_call(name, args),
-                    ExprAst::GlobalDataAddr(name) => self.translate_global_data_addr(name),
-                    ExprAst::Identifier(name) => {
+                    Expr::Call(name, args) => self.translate_call(name, args),
+                    Expr::GlobalDataAddr(name) => self.translate_global_data_addr(name),
+                    Expr::Identifier(name) => {
                         let variable = self.variables.get(&name).expect("variable not defined");
                         self.builder.use_var(*variable)
                     }
-                    ExprAst::Assign(name, expr) => self.translate_assign(name, *expr),
-                    ExprAst::IfElse(condition, then_body, else_body) => {
+                    Expr::Assign(name, expr) => self.translate_assign(name, *expr),
+                    Expr::IfElse(condition, then_body, else_body) => {
                         self.translate_if_else(*condition, then_body, else_body)
                     }
-                    ExprAst::WhileLoop(condition, loop_body) => {
+                    Expr::WhileLoop(condition, loop_body) => {
                         self.translate_while_loop(*condition, loop_body)
                     }
                 }
             }
-            fn translate_assign(&mut self, name: String, expr: ExprAst) -> Value {
+            fn translate_assign(&mut self, name: String, expr: Expr) -> Value {
                 let new_value = self.translate_expr(expr);
                 let variable = self.variables.get(&name).unwrap();
                 self.builder.def_var(*variable, new_value);
                 new_value
             }
-            fn translate_icmp(&mut self, cmp: IntCC, lhs: ExprAst, rhs: ExprAst) -> Value {
+            fn translate_icmp(&mut self, cmp: IntCC, lhs: Expr, rhs: Expr) -> Value {
                 let lhs = self.translate_expr(lhs);
                 let rhs = self.translate_expr(rhs);
                 self.builder.ins().icmp(cmp, lhs, rhs)
             }
             fn translate_if_else(
                 &mut self,
-                condition: ExprAst,
-                then_body: Vec<ExprAst>,
-                else_body: Vec<ExprAst>,
+                condition: Expr,
+                then_body: Vec<Expr>,
+                else_body: Vec<Expr>,
             ) -> Value {
                 let condition_value = self.translate_expr(condition);
                 let then_block = self.builder.create_block();
@@ -247,8 +247,8 @@ pub mod ir {
             }
             fn translate_while_loop(
                 &mut self,
-                condition: ExprAst,
-                loop_body: Vec<ExprAst>,
+                condition: Expr,
+                loop_body: Vec<Expr>,
             ) -> Value {
                 let header_block = self.builder.create_block();
                 let body_block = self.builder.create_block();
@@ -270,7 +270,7 @@ pub mod ir {
                 self.builder.seal_block(exit_block);
                 self.builder.ins().iconst(self.int, 0)
             }
-            fn translate_call(&mut self, name: String, args: Vec<ExprAst>) -> Value {
+            fn translate_call(&mut self, name: String, args: Vec<Expr>) -> Value {
                 let mut sig = self.module.make_signature();
                 for _arg in &args {
                     sig.params.push(AbiParam::new(self.int));
@@ -364,7 +364,7 @@ pub mod ir {
         builder: &mut FunctionBuilder,
         params: &[String],
         the_return: &str,
-        stmts: &[ExprAst],
+        stmts: &[Expr],
         entry_block: Block,
     ) -> HashMap<String, Variable> {
         let mut variables = HashMap::new();
@@ -390,13 +390,13 @@ pub mod ir {
         builder: &mut FunctionBuilder,
         variables: &mut HashMap<String, Variable>,
         index: &mut usize,
-        expr: &ExprAst,
+        expr: &Expr,
     ) {
         match *expr {
-            ExprAst::Assign(ref name, _) => {
+            Expr::Assign(ref name, _) => {
                 declare_variable(int, builder, variables, index, name);
             }
-            ExprAst::IfElse(ref _condition, ref then_body, ref else_body) => {
+            Expr::IfElse(ref _condition, ref then_body, ref else_body) => {
                 for stmt in then_body {
                     declare_variables_in_stmt(int, builder, variables, index, stmt);
                 }
@@ -404,7 +404,7 @@ pub mod ir {
                     declare_variables_in_stmt(int, builder, variables, index, stmt);
                 }
             }
-            ExprAst::WhileLoop(ref _condition, ref loop_body) => {
+            Expr::WhileLoop(ref _condition, ref loop_body) => {
                 for stmt in loop_body {
                     declare_variables_in_stmt(int, builder, variables, index, stmt);
                 }
@@ -982,7 +982,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<Vec<ExprAst>> {
+            ) -> ::peg::RuleResult<Vec<Expr>> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     let __seq_res = {
@@ -1017,7 +1017,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     let __seq_res = match __parse__(__input, __state, __err_state, __pos) {
@@ -1066,7 +1066,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     let __choice_res = __parse_if_else(__input, __state, __err_state, __pos);
@@ -1103,7 +1103,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     fn __infix_parse<T, S>(
@@ -1320,7 +1320,7 @@ pub mod parser {
                                                                                                                                                                                                                                                 ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                                                                                                                                                     ::peg::RuleResult::Matched(__pos,
                                                                                                                                                                                                                                                         (||
-                                                                                                                                                                                                                                                                    { ExprAst::IfElse(Box::new(e), then_body, else_body) })())
+                                                                                                                                                                                                                                                                    { Expr::IfElse(Box::new(e), then_body, else_body) })())
                                                                                                                                                                                                                                                 }
                                                                                                                                                                                                                                                 ::peg::RuleResult::Failed => {
                                                                                                                                                                                                                                                     __err_state.mark_failure(__pos, "\"}\"");
@@ -1515,7 +1515,7 @@ pub mod parser {
                                                                                                                                                                                                     ::peg::RuleResult::Matched(__pos,
                                                                                                                                                                                                         (||
                                                                                                                                                                                                                     {
-                                                                                                                                                                                                                        ExprAst::IfElse(Box::new(e), then_body,
+                                                                                                                                                                                                                        Expr::IfElse(Box::new(e), then_body,
                                                                                                                                                                                                                             <[_]>::into_vec(#[rustc_box] ::alloc::boxed::Box::new([else_body])))
                                                                                                                                                                                                                     })())
                                                                                                                                                                                                 }
@@ -1605,7 +1605,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 match ::peg::ParseLiteral::parse_string_literal(__input, __pos, "while") {
                     ::peg::RuleResult::Matched(__pos, __val) => {
@@ -1672,7 +1672,7 @@ pub mod parser {
                                                                                                                         __pos, "}") {
                                                                                                                     ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                         ::peg::RuleResult::Matched(__pos,
-                                                                                                                            (|| { ExprAst::WhileLoop(Box::new(e), loop_body) })())
+                                                                                                                            (|| { Expr::WhileLoop(Box::new(e), loop_body) })())
                                                                                                                     }
                                                                                                                     ::peg::RuleResult::Failed => {
                                                                                                                         __err_state.mark_failure(__pos, "\"}\"");
@@ -1723,7 +1723,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     let __seq_res = __parse_identifier(__input, __state, __err_state, __pos);
@@ -1767,7 +1767,7 @@ pub mod parser {
                                                             ::peg::RuleResult::Matched(
                                                                 __pos,
                                                                 (|| {
-                                                                    ExprAst::Assign(i, Box::new(e))
+                                                                    Expr::Assign(i, Box::new(e))
                                                                 })(
                                                                 ),
                                                             )
@@ -1800,7 +1800,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     fn __infix_parse<T, S>(
@@ -1999,7 +1999,7 @@ pub mod parser {
                                                                                                     __pos, ")") {
                                                                                                 ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                     ::peg::RuleResult::Matched(__pos,
-                                                                                                        (|| { ExprAst::Call(i, args) })())
+                                                                                                        (|| { Expr::Call(i, args) })())
                                                                                                 }
                                                                                                 ::peg::RuleResult::Failed => {
                                                                                                     __err_state.mark_failure(__pos, "\")\"");
@@ -2031,7 +2031,7 @@ pub mod parser {
                                     ::peg::RuleResult::Matched(__pos, i) => {
                                         ::peg::RuleResult::Matched(
                                             __pos,
-                                            (|| ExprAst::Identifier(i))(),
+                                            (|| Expr::Identifier(i))(),
                                         )
                                     }
                                     ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,
@@ -2101,7 +2101,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Eq(
+                                                                    Expr::Eq(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2171,7 +2171,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Ne(
+                                                                    Expr::Ne(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2241,7 +2241,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Lt(
+                                                                    Expr::Lt(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2311,7 +2311,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Le(
+                                                                    Expr::Le(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2381,7 +2381,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Gt(
+                                                                    Expr::Gt(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2451,7 +2451,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Ge(
+                                                                    Expr::Ge(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2523,7 +2523,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Add(
+                                                                    Expr::Add(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2593,7 +2593,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Sub(
+                                                                    Expr::Sub(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2665,7 +2665,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Mul(
+                                                                    Expr::Mul(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2735,7 +2735,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Div(
+                                                                    Expr::Div(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -2827,7 +2827,7 @@ pub mod parser {
                                                                                                                                         ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                                             let a = __infix_result;
                                                                                                                                             __infix_result =
-                                                                                                                                                (|| { ExprAst::Mod(Box::new(a), Box::new(b)) })();
+                                                                                                                                                (|| { Expr::Mod(Box::new(a), Box::new(b)) })();
                                                                                                                                             ::peg::RuleResult::Matched(__pos, ())
                                                                                                                                         }
                                                                                                                                         ::peg::RuleResult::Failed => {
@@ -2908,7 +2908,7 @@ pub mod parser {
                                                             ) {
                                                                 let a = __infix_result;
                                                                 __infix_result = (|| {
-                                                                    ExprAst::Mod(
+                                                                    Expr::Mod(
                                                                         Box::new(a),
                                                                         Box::new(b),
                                                                     )
@@ -3061,7 +3061,7 @@ pub mod parser {
                 __state: &mut ParseState<'input>,
                 __err_state: &mut ::peg::error::ErrorState,
                 __pos: usize,
-            ) -> ::peg::RuleResult<ExprAst> {
+            ) -> ::peg::RuleResult<Expr> {
                 #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
                 {
                     let __choice_res = {
@@ -3121,7 +3121,7 @@ pub mod parser {
                         match __seq_res {
                             ::peg::RuleResult::Matched(__pos, n) => ::peg::RuleResult::Matched(
                                 __pos,
-                                (|| ExprAst::Literal(n.to_owned()))(),
+                                (|| Expr::Literal(n.to_owned()))(),
                             ),
                             ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,
                         }
@@ -3139,7 +3139,7 @@ pub mod parser {
                                         ::peg::RuleResult::Matched(__pos, i) => {
                                             ::peg::RuleResult::Matched(
                                                 __pos,
-                                                (|| ExprAst::GlobalDataAddr(i))(),
+                                                (|| Expr::GlobalDataAddr(i))(),
                                             )
                                         }
                                         ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,

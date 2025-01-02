@@ -467,7 +467,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<Vec<ExprAst>> {
+    ) -> ::peg::RuleResult<Vec<Expr>> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             let __seq_res = {
@@ -499,7 +499,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             let __seq_res = match __parse__(__input, __state, __err_state, __pos) {
@@ -546,7 +546,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             let __choice_res = __parse_if_else(__input, __state, __err_state, __pos);
@@ -582,7 +582,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             fn __infix_parse<T, S>(
@@ -778,7 +778,7 @@ pub mod parser {
                                                                                                                                                                                                                                                 ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                                                                                                                                                     ::peg::RuleResult::Matched(__pos,
                                                                                                                                                                                                                                                         (||
-                                                                                                                                                                                                                                                                    { ExprAst::IfElse(Box::new(e), then_body, else_body) })())
+                                                                                                                                                                                                                                                                    { Expr::IfElse(Box::new(e), then_body, else_body) })())
                                                                                                                                                                                                                                                 }
                                                                                                                                                                                                                                                 ::peg::RuleResult::Failed => {
                                                                                                                                                                                                                                                     __err_state.mark_failure(__pos, "\"}\"");
@@ -967,7 +967,7 @@ pub mod parser {
                                                                                                                                                                                                     ::peg::RuleResult::Matched(__pos,
                                                                                                                                                                                                         (||
                                                                                                                                                                                                                     {
-                                                                                                                                                                                                                        ExprAst::IfElse(Box::new(e), then_body,
+                                                                                                                                                                                                                        Expr::IfElse(Box::new(e), then_body,
                                                                                                                                                                                                                             <[_]>::into_vec(Box::new([else_body])))
                                                                                                                                                                                                                     })())
                                                                                                                                                                                                 }
@@ -1053,7 +1053,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         match ::peg::ParseLiteral::parse_string_literal(__input, __pos, "while") {
             ::peg::RuleResult::Matched(__pos, __val) => {
@@ -1115,7 +1115,7 @@ pub mod parser {
                                                                                                                         __pos, "}") {
                                                                                                                     ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                         ::peg::RuleResult::Matched(__pos,
-                                                                                                                            (|| { ExprAst::WhileLoop(Box::new(e), loop_body) })())
+                                                                                                                            (|| { Expr::WhileLoop(Box::new(e), loop_body) })())
                                                                                                                     }
                                                                                                                     ::peg::RuleResult::Failed => {
                                                                                                                         __err_state.mark_failure(__pos, "\"}\"");
@@ -1166,7 +1166,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             let __seq_res = __parse_identifier(__input, __state, __err_state, __pos);
@@ -1199,7 +1199,7 @@ pub mod parser {
                                                 ::peg::RuleResult::Matched(__pos, e) => {
                                                     ::peg::RuleResult::Matched(
                                                         __pos,
-                                                        (|| ExprAst::Assign(i, Box::new(e)))(),
+                                                        (|| Expr::Assign(i, Box::new(e)))(),
                                                     )
                                                 }
                                                 ::peg::RuleResult::Failed => {
@@ -1228,7 +1228,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             fn __infix_parse<T, S>(
@@ -1425,7 +1425,7 @@ pub mod parser {
                                                                                                     __pos, ")") {
                                                                                                 ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                     ::peg::RuleResult::Matched(__pos,
-                                                                                                        (|| { ExprAst::Call(i, args) })())
+                                                                                                        (|| { Expr::Call(i, args) })())
                                                                                                 }
                                                                                                 ::peg::RuleResult::Failed => {
                                                                                                     __err_state.mark_failure(__pos, "\")\"");
@@ -1454,7 +1454,7 @@ pub mod parser {
                         let __seq_res = __parse_identifier(__input, __state, __err_state, __pos);
                         match __seq_res {
                             ::peg::RuleResult::Matched(__pos, i) => {
-                                ::peg::RuleResult::Matched(__pos, (|| ExprAst::Identifier(i))())
+                                ::peg::RuleResult::Matched(__pos, (|| Expr::Identifier(i))())
                             }
                             ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,
                         }
@@ -1515,7 +1515,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Eq(Box::new(a), Box::new(b))
+                                                            Expr::Eq(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1572,7 +1572,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Ne(Box::new(a), Box::new(b))
+                                                            Expr::Ne(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1629,7 +1629,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Lt(Box::new(a), Box::new(b))
+                                                            Expr::Lt(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1686,7 +1686,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Le(Box::new(a), Box::new(b))
+                                                            Expr::Le(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1743,7 +1743,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Gt(Box::new(a), Box::new(b))
+                                                            Expr::Gt(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1800,7 +1800,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Ge(Box::new(a), Box::new(b))
+                                                            Expr::Ge(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1859,7 +1859,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Add(Box::new(a), Box::new(b))
+                                                            Expr::Add(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1916,7 +1916,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Sub(Box::new(a), Box::new(b))
+                                                            Expr::Sub(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -1975,7 +1975,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Mul(Box::new(a), Box::new(b))
+                                                            Expr::Mul(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -2032,7 +2032,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Div(Box::new(a), Box::new(b))
+                                                            Expr::Div(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -2138,7 +2138,7 @@ pub mod parser {
                                                                                                                                         ::peg::RuleResult::Matched(__pos, __val) => {
                                                                                                                                             let a = __infix_result;
                                                                                                                                             __infix_result =
-                                                                                                                                                (|| { ExprAst::Mod(Box::new(a), Box::new(b)) })();
+                                                                                                                                                (|| { Expr::Mod(Box::new(a), Box::new(b)) })();
                                                                                                                                             ::peg::RuleResult::Matched(__pos, ())
                                                                                                                                         }
                                                                                                                                         ::peg::RuleResult::Failed => {
@@ -2215,7 +2215,7 @@ pub mod parser {
                                                     {
                                                         let a = __infix_result;
                                                         __infix_result = (|| {
-                                                            ExprAst::Mod(Box::new(a), Box::new(b))
+                                                            Expr::Mod(Box::new(a), Box::new(b))
                                                         })(
                                                         );
                                                         ::peg::RuleResult::Matched(__pos, ())
@@ -2366,7 +2366,7 @@ pub mod parser {
         __state: &mut ParseState<'input>,
         __err_state: &mut ::peg::error::ErrorState,
         __pos: usize,
-    ) -> ::peg::RuleResult<ExprAst> {
+    ) -> ::peg::RuleResult<Expr> {
         #![allow(non_snake_case, unused, clippy::redundant_closure_call)]
         {
             let __choice_res = {
@@ -2415,7 +2415,7 @@ pub mod parser {
                 };
                 match __seq_res {
                     ::peg::RuleResult::Matched(__pos, n) => {
-                        ::peg::RuleResult::Matched(__pos, (|| ExprAst::Literal(n.to_owned()))())
+                        ::peg::RuleResult::Matched(__pos, (|| Expr::Literal(n.to_owned()))())
                     }
                     ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,
                 }
@@ -2432,7 +2432,7 @@ pub mod parser {
                             match __seq_res {
                                 ::peg::RuleResult::Matched(__pos, i) => ::peg::RuleResult::Matched(
                                     __pos,
-                                    (|| ExprAst::GlobalDataAddr(i))(),
+                                    (|| Expr::GlobalDataAddr(i))(),
                                 ),
                                 ::peg::RuleResult::Failed => ::peg::RuleResult::Failed,
                             }

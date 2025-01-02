@@ -15,69 +15,69 @@ pub struct FunctionTranslator<'a, M: Module> {
 impl<M: Module> FunctionTranslator<'_, M> {
     /// When you write out instructions in Cranelift, you get back `Value`s. You
     /// can then use these references in other instructions.
-    pub fn translate_expr(&mut self, expr: ExprAst) -> Value {
+    pub fn translate_expr(&mut self, expr: Expr) -> Value {
         match expr {
-            ExprAst::Literal(literal) => {
+            Expr::Literal(literal) => {
                 let imm: i32 = literal.parse().unwrap();
                 self.builder.ins().iconst(self.int, i64::from(imm))
             }
 
-            ExprAst::Add(lhs, rhs) => {
+            Expr::Add(lhs, rhs) => {
                 let lhs = self.translate_expr(*lhs);
                 let rhs = self.translate_expr(*rhs);
                 self.builder.ins().iadd(lhs, rhs)
             }
 
-            ExprAst::Sub(lhs, rhs) => {
+            Expr::Sub(lhs, rhs) => {
                 let lhs = self.translate_expr(*lhs);
                 let rhs = self.translate_expr(*rhs);
                 self.builder.ins().isub(lhs, rhs)
             }
 
-            ExprAst::Mul(lhs, rhs) => {
+            Expr::Mul(lhs, rhs) => {
                 let lhs = self.translate_expr(*lhs);
                 let rhs = self.translate_expr(*rhs);
                 self.builder.ins().imul(lhs, rhs)
             }
 
-            ExprAst::Div(lhs, rhs) => {
+            Expr::Div(lhs, rhs) => {
                 let lhs = self.translate_expr(*lhs);
                 let rhs = self.translate_expr(*rhs);
                 self.builder.ins().udiv(lhs, rhs)
             }
 
-            ExprAst::Mod(lhs, rhs) => {
+            Expr::Mod(lhs, rhs) => {
                 let lhs = self.translate_expr(*lhs);
                 let rhs = self.translate_expr(*rhs);
                 self.builder.ins().urem(lhs, rhs)
             }
 
-            ExprAst::Eq(lhs, rhs) => self.translate_icmp(IntCC::Equal, *lhs, *rhs),
-            ExprAst::Ne(lhs, rhs) => self.translate_icmp(IntCC::NotEqual, *lhs, *rhs),
-            ExprAst::Lt(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThan, *lhs, *rhs),
-            ExprAst::Le(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThanOrEqual, *lhs, *rhs),
-            ExprAst::Gt(lhs, rhs) => self.translate_icmp(IntCC::SignedGreaterThan, *lhs, *rhs),
-            ExprAst::Ge(lhs, rhs) => {
+            Expr::Eq(lhs, rhs) => self.translate_icmp(IntCC::Equal, *lhs, *rhs),
+            Expr::Ne(lhs, rhs) => self.translate_icmp(IntCC::NotEqual, *lhs, *rhs),
+            Expr::Lt(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThan, *lhs, *rhs),
+            Expr::Le(lhs, rhs) => self.translate_icmp(IntCC::SignedLessThanOrEqual, *lhs, *rhs),
+            Expr::Gt(lhs, rhs) => self.translate_icmp(IntCC::SignedGreaterThan, *lhs, *rhs),
+            Expr::Ge(lhs, rhs) => {
                 self.translate_icmp(IntCC::SignedGreaterThanOrEqual, *lhs, *rhs)
             }
-            ExprAst::Call(name, args) => self.translate_call(name, args),
-            ExprAst::GlobalDataAddr(name) => self.translate_global_data_addr(name),
-            ExprAst::Identifier(name) => {
+            Expr::Call(name, args) => self.translate_call(name, args),
+            Expr::GlobalDataAddr(name) => self.translate_global_data_addr(name),
+            Expr::Identifier(name) => {
                 // `use_var` is used to read the value of a variable.
                 let variable = self.variables.get(&name).expect("variable not defined");
                 self.builder.use_var(*variable)
             }
-            ExprAst::Assign(name, expr) => self.translate_assign(name, *expr),
-            ExprAst::IfElse(condition, then_body, else_body) => {
+            Expr::Assign(name, expr) => self.translate_assign(name, *expr),
+            Expr::IfElse(condition, then_body, else_body) => {
                 self.translate_if_else(*condition, then_body, else_body)
             }
-            ExprAst::WhileLoop(condition, loop_body) => {
+            Expr::WhileLoop(condition, loop_body) => {
                 self.translate_while_loop(*condition, loop_body)
             }
         }
     }
 
-    fn translate_assign(&mut self, name: String, expr: ExprAst) -> Value {
+    fn translate_assign(&mut self, name: String, expr: Expr) -> Value {
         // `def_var` is used to write the value of a variable. Note that
         // variables can have multiple definitions. Cranelift will
         // convert them into SSA form for itself automatically.
@@ -87,7 +87,7 @@ impl<M: Module> FunctionTranslator<'_, M> {
         new_value
     }
 
-    fn translate_icmp(&mut self, cmp: IntCC, lhs: ExprAst, rhs: ExprAst) -> Value {
+    fn translate_icmp(&mut self, cmp: IntCC, lhs: Expr, rhs: Expr) -> Value {
         let lhs = self.translate_expr(lhs);
         let rhs = self.translate_expr(rhs);
         self.builder.ins().icmp(cmp, lhs, rhs)
@@ -95,9 +95,9 @@ impl<M: Module> FunctionTranslator<'_, M> {
 
     fn translate_if_else(
         &mut self,
-        condition: ExprAst,
-        then_body: Vec<ExprAst>,
-        else_body: Vec<ExprAst>,
+        condition: Expr,
+        then_body: Vec<Expr>,
+        else_body: Vec<Expr>,
     ) -> Value {
         let condition_value = self.translate_expr(condition);
 
@@ -150,7 +150,7 @@ impl<M: Module> FunctionTranslator<'_, M> {
         phi
     }
 
-    fn translate_while_loop(&mut self, condition: ExprAst, loop_body: Vec<ExprAst>) -> Value {
+    fn translate_while_loop(&mut self, condition: Expr, loop_body: Vec<Expr>) -> Value {
         let header_block = self.builder.create_block();
         let body_block = self.builder.create_block();
         let exit_block = self.builder.create_block();
@@ -182,7 +182,7 @@ impl<M: Module> FunctionTranslator<'_, M> {
         self.builder.ins().iconst(self.int, 0)
     }
 
-    fn translate_call(&mut self, name: String, args: Vec<ExprAst>) -> Value {
+    fn translate_call(&mut self, name: String, args: Vec<Expr>) -> Value {
         let mut sig = self.module.make_signature();
 
         // Add a parameter for each argument.

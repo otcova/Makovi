@@ -1,9 +1,7 @@
-use super::*;
 use crate::ast::*;
-use std::cell::RefCell;
 
-peg::parser!(pub grammar parser<'a>(arena: &ExprArena<'input>, buffers: &'a ReusablePool<VecExpr<'input>>) for str {
-    pub rule function() -> FunctionAst<'input>
+peg::parser!(pub grammar parser<'a>(arena: &Ast<'input>) for str {
+    pub rule function() -> FunctionExpr<'input>
         = [' ' | '\n']* "function" _ name:identifier() _
         "(" params_names:((_ i:identifier() _ {i}) ** ",") ")" _
         "->" _
@@ -12,89 +10,77 @@ peg::parser!(pub grammar parser<'a>(arena: &ExprArena<'input>, buffers: &'a Reus
         statements:statements()
         _ "}" _ "\n" _
         {
-            FunctionAst {
+            FunctionExpr {
                 name,
                 params_names,
                 return_name,
                 statements,
-                // statements: statements.take_owned(),
             }
         }
 
     rule statements() -> VecExpr<'input>
         = s:(statement()*) { s }
 
-    // rule statements() -> VecExpr<'input>
-    //     = s:(statement()*) { VecExpr::from_vec(s) }
-
     // rule statements() -> VecExpr<'input> = s:statements_loop()
     //     { s.into_inner() }
-    //
-    // rule statements_loop() -> RefCell<VecExpr<'input>> = precedence! {
+    // rule statements_loop() -> RefCell<VecExpr<'input>> =
+    //     statements_iter() / statements_last()
+    // rule statements_iter() -> RefCell<VecExpr<'input>> =
     //     s:statement() vec:statements_loop() { vec.borrow_mut().push(s); vec }
-    //     // _ { RefCell::new(buffers.extract_buffer()) }
+    // rule statements_last() -> RefCell<VecExpr<'input>> =
     //     _ { RefCell::new(VecExpr::new()) }
-    // }
 
 
-    // rule statements() -> Reused<'a, VecExpr<'input>> = s:statements_loop()
-    //     { s.into_inner() }
-    //
-    // rule statements_loop() -> RefCell<Reused<'a, VecExpr<'input>>> = precedence! {
-    //     s:statement() vec:statements_loop() { vec.borrow_mut().push(s); vec }
-    //     _ { RefCell::new(buffers.take_buffer()) }
-    // }
-
-    rule statement() -> ExprAst<'input>
+    rule statement() -> Expr<'input>
         = _ e:expression() _ "\n" { e }
 
-    rule expression() -> ExprAst<'input>
+    rule expression() -> Expr<'input>
         = if_else()
         / while_loop()
         / assignment()
         / binary_op()
 
-    rule if_else() -> ExprAst<'input> = precedence! {
+    rule if_else() -> Expr<'input> = precedence! {
         "if" _ e:expression() _ "{" _ "\n"
             then_body:statements() _
         "}" _ "else" _ "{" _ "\n"
             else_body:statements() _
         "}"
-        { ExprAst::IfElse(arena.push(e), arena.push_all(then_body.as_slice()), arena.push_all(else_body.as_slice())) }
+        { Expr::IfElse(arena.push(e), arena.push_all(&then_body), arena.push_all(&else_body)) }
 
         "if" _ e:expression() _ "{" _ "\n"
             then_body:statements() _
         "}" _ "else" _ else_body:if_else()
-        { ExprAst::IfElseIf(arena.push(e), arena.push_all(then_body.as_slice()), arena.push(else_body)) }
+        { Expr::IfElseIf(arena.push(e), arena.push_all(&then_body), arena.push(else_body)) }
     }
 
-    rule while_loop() -> ExprAst<'input>
+    rule while_loop() -> Expr<'input>
         = "while" _ e:expression() _ "{" _ "\n"
         loop_body:statements() _ "}"
-        { ExprAst::WhileLoop(arena.push(e), arena.push_all(loop_body.as_slice())) }
+        { Expr::WhileLoop(arena.push(e), arena.push_all(&loop_body)) }
 
-    rule assignment() -> ExprAst<'input>
-        = i:identifier() _ "=" _ e:expression() {ExprAst::Assign(i, arena.push(e))}
+    rule assignment() -> Expr<'input>
+        = i:identifier() _ "=" _ e:expression() {Expr::Assign(i, arena.push(e))}
 
-    rule binary_op() -> ExprAst<'input> = precedence!{
-        a:@ _ "==" _ b:(@) { ExprAst::Eq(arena.push(a), arena.push(b)) }
-        a:@ _ "!=" _ b:(@) { ExprAst::Ne(arena.push(a), arena.push(b)) }
-        a:@ _ "<"  _ b:(@) { ExprAst::Lt(arena.push(a), arena.push(b)) }
-        a:@ _ "<=" _ b:(@) { ExprAst::Le(arena.push(a), arena.push(b)) }
-        a:@ _ ">"  _ b:(@) { ExprAst::Gt(arena.push(a), arena.push(b)) }
-        a:@ _ ">=" _ b:(@) { ExprAst::Ge(arena.push(a), arena.push(b)) }
+    rule binary_op() -> Expr<'input> = precedence!{
+        a:@ _ "==" _ b:(@) { Expr::Eq(arena.push(a), arena.push(b)) }
+        a:@ _ "!=" _ b:(@) { Expr::Ne(arena.push(a), arena.push(b)) }
+        a:@ _ "<"  _ b:(@) { Expr::Lt(arena.push(a), arena.push(b)) }
+        a:@ _ "<=" _ b:(@) { Expr::Le(arena.push(a), arena.push(b)) }
+        a:@ _ ">"  _ b:(@) { Expr::Gt(arena.push(a), arena.push(b)) }
+        a:@ _ ">=" _ b:(@) { Expr::Ge(arena.push(a), arena.push(b)) }
         --
-        a:@ _ "+" _ b:(@) { ExprAst::Add(arena.push(a), arena.push(b)) }
-        a:@ _ "-" _ b:(@) { ExprAst::Sub(arena.push(a), arena.push(b)) }
+        a:@ _ "+" _ b:(@) { Expr::Add(arena.push(a), arena.push(b)) }
+        a:@ _ "-" _ b:(@) { Expr::Sub(arena.push(a), arena.push(b)) }
         --
-        a:@ _ "*" _ b:(@) { ExprAst::Mul(arena.push(a), arena.push(b)) }
-        a:@ _ "/" _ b:(@) { ExprAst::Div(arena.push(a), arena.push(b)) }
+        a:@ _ "*" _ b:(@) { Expr::Mul(arena.push(a), arena.push(b)) }
+        a:@ _ "/" _ b:(@) { Expr::Div(arena.push(a), arena.push(b)) }
         --
-        a:@ _ "mod" _ "(" _ b:expression() _ ")" { ExprAst::Mod(arena.push(a), arena.push(b)) }
-        a:@ _ "mod" _ b:(@) { ExprAst::Mod(arena.push(a), arena.push(b)) }
+        a:@ _ "mod" _ "(" _ b:expression() _ ")" { Expr::Mod(arena.push(a), arena.push(b)) }
+        a:@ _ "mod" _ b:(@) { Expr::Mod(arena.push(a), arena.push(b)) }
         --
-        i:identifier() _ "(" args:((_ e:expression() _ {e}) ** ",") ")" { ExprAst::Call(i, arena.push_vec(args)) }
-        i:identifier() { ExprAst::Identifier(i) }
+        i:identifier() _ "(" args:((_ e:expression() _ {e}) ** ",") ")" { Expr::Call(i, arena.push_vec(args)) }
+        i:identifier() { Expr::Identifier(i) }
         l:literal() { l }
     }
 
@@ -102,9 +88,9 @@ peg::parser!(pub grammar parser<'a>(arena: &ExprArena<'input>, buffers: &'a Reus
         = quiet!{ n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { n } }
         / expected!("identifier")
 
-    rule literal() -> ExprAst<'input>
-        = n:$(['0'..='9']+) { ExprAst::Literal(n) }
-        / "&" i:identifier() { ExprAst::GlobalDataAddr(i) }
+    rule literal() -> Expr<'input>
+        = n:$(['0'..='9']+) { Expr::Literal(n) }
+        / "&" i:identifier() { Expr::GlobalDataAddr(i) }
 
     rule _() =  quiet!{[' ']*}
 });

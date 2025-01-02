@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 #[derive(Debug, Clone)]
-pub enum ExprAst<'a> {
+pub enum Expr<'a> {
     Literal(&'a str),
     Identifier(&'a str),
     Assign(&'a str, ExprPtr<'a>),
@@ -25,93 +25,57 @@ pub enum ExprAst<'a> {
     GlobalDataAddr(&'a str),
 }
 
-pub struct FunctionAst<'a> {
+pub struct FunctionExpr<'a> {
     pub name: &'a str,
     pub params_names: Vec<&'a str>,
     pub return_name: &'a str,
     pub statements: VecExpr<'a>,
 }
 
-pub struct ExprArena<'a> {
-    data: RefCell<Vec<ExprAst<'a>>>,
+pub struct Ast<'a> {
+    nodes: RefCell<Vec<Expr<'a>>>,
 }
 
-impl Default for ExprArena<'_> {
+impl Default for Ast<'_> {
     fn default() -> Self {
         Self {
-            data: RefCell::new(Vec::with_capacity(256)),
+            nodes: RefCell::new(Vec::with_capacity(256)),
         }
     }
 }
 
-impl ExprArena<'_> {
+impl Ast<'_> {
     pub fn clear(&mut self) {
-        self.data.borrow_mut().clear();
+        self.nodes.borrow_mut().clear();
     }
 }
 
-// pub type VecExpr<'a> = smallvec::SmallVec<ExprAst<'a>, 2>;
-pub type VecExpr<'a> = Vec<ExprAst<'a>>;
-
-/////////////////////////////////////////////
-
-// type ExprPtr<'a> = Box<ExprAst<'a>>;
-// type ExprVecPtr<'a> = Vec<ExprAst<'a>>;
-//
-// impl<'a> ExprArena<'a> {
-//     pub fn push(&self, expr: ExprAst<'a>) -> ExprPtr<'a> {
-//         Box::new(expr)
-//     }
-//
-//     pub fn push_vec(&self, expr: Vec<ExprAst<'a>>) -> ExprVecPtr<'a> {
-//         expr
-//     }
-// }
-
-/////////////////////////////////////////////
-
-// type ExprPtr<'a> = u32;
-// type ExprVecPtr<'a> = Vec<ExprAst<'a>>;
-//
-// impl<'a> ExprArena<'a> {
-//     pub fn push(&self, expr: ExprAst<'a>) -> ExprPtr<'a> {
-//         let mut data = self.data.borrow_mut();
-//         data.push(expr);
-//         (data.len() - 1) as ExprPtr
-//     }
-//
-//     pub fn push_vec(&self, expr: Vec<ExprAst<'a>>) -> ExprVecPtr<'a> {
-//         expr
-//     }
-// }
-
-/////////////////////////////////////////////
+// pub type VecExpr<'a> = smallvec::SmallVec<Expr<'a>, 2>;
+pub type VecExpr<'a> = Vec<Expr<'a>>;
 
 type ExprPtr<'a> = u32;
 type ExprVecPtr<'a> = u32;
 
-impl<'a> ExprArena<'a> {
-    pub fn push(&self, expr: ExprAst<'a>) -> ExprPtr<'a> {
-        let mut data = self.data.borrow_mut();
+impl<'a> Ast<'a> {
+    pub fn push(&self, expr: Expr<'a>) -> ExprPtr<'a> {
+        let mut data = self.nodes.borrow_mut();
         data.push(expr);
         (data.len() - 1) as ExprPtr
     }
 
-    pub fn push_all(&self, mut exprs: &[ExprAst<'a>]) -> ExprVecPtr<'a> {
+    pub fn push_all(&self, exprs: &[Expr<'a>]) -> ExprVecPtr<'a> {
+        self.nodes.borrow_mut().extend_from_slice(exprs);
+        exprs.len() as ExprPtr
+    }
+
+    pub fn push_vec(&self, mut exprs: Vec<Expr<'a>>) -> ExprVecPtr<'a> {
         let len = exprs.len();
 
-        self.data.borrow_mut().extend_from_slice(&mut exprs);
+        self.nodes.borrow_mut().append(&mut exprs);
         len as ExprPtr
     }
 
-    pub fn push_vec(&self, mut exprs: Vec<ExprAst<'a>>) -> ExprVecPtr<'a> {
-        let len = exprs.len();
-
-        self.data.borrow_mut().append(&mut exprs);
-        len as ExprPtr
-    }
-
-    // fn get(&self, index: ExprPtr) -> ExprAst {
+    // fn get(&self, index: ExprPtr) -> Expr {
     //     self.data.borrow()[index as usize].clone()
     // }
 }

@@ -104,7 +104,7 @@ fn declare_variables(
     builder: &mut FunctionBuilder,
     params: &[String],
     the_return: &str,
-    stmts: &[ExprAst],
+    stmts: &[Expr],
     entry_block: Block,
 ) -> HashMap<String, Variable> {
     let mut variables = HashMap::new();
@@ -134,13 +134,13 @@ fn declare_variables_in_stmt(
     builder: &mut FunctionBuilder,
     variables: &mut HashMap<String, Variable>,
     index: &mut usize,
-    expr: &ExprAst,
+    expr: &Expr,
 ) {
     match *expr {
-        ExprAst::Assign(ref name, _) => {
+        Expr::Assign(ref name, _) => {
             declare_variable(int, builder, variables, index, name);
         }
-        ExprAst::IfElse(ref _condition, ref then_body, ref else_body) => {
+        Expr::IfElse(ref _condition, ref then_body, ref else_body) => {
             for stmt in then_body {
                 declare_variables_in_stmt(int, builder, variables, index, stmt);
             }
@@ -148,7 +148,7 @@ fn declare_variables_in_stmt(
                 declare_variables_in_stmt(int, builder, variables, index, stmt);
             }
         }
-        ExprAst::WhileLoop(ref _condition, ref loop_body) => {
+        Expr::WhileLoop(ref _condition, ref loop_body) => {
             for stmt in loop_body {
                 declare_variables_in_stmt(int, builder, variables, index, stmt);
             }
