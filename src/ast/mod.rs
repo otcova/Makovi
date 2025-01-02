@@ -29,7 +29,7 @@ pub struct FunctionExpr<'a> {
     pub name: &'a str,
     pub params_names: Vec<&'a str>,
     pub return_name: &'a str,
-    pub statements: VecExpr<'a>,
+    pub statements: &'a Ast<'a>,
 }
 
 pub struct Ast<'a> {

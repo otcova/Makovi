@@ -7,7 +7,11 @@ use peg_parser::parser;
 pub struct ParserContext {}
 
 impl ParserContext {
-    pub fn parse<'c>(&'c self, code: &'c str, arena: &Ast<'c>) -> Result<FunctionExpr<'c>, String> {
+    pub fn parse<'c>(
+        &'c self,
+        code: &'c str,
+        arena: &'c Ast<'c>,
+    ) -> Result<FunctionExpr<'c>, String> {
         parser::function(code, arena).map_err(|e| format!("Parsing error: {}", e))
     }
 }

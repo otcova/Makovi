@@ -1,26 +1,26 @@
 use crate::ast::*;
 
-peg::parser!(pub grammar parser<'a>(arena: &Ast<'input>) for str {
+peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
     pub rule function() -> FunctionExpr<'input>
         = [' ' | '\n']* "function" _ name:identifier() _
         "(" params_names:((_ i:identifier() _ {i}) ** ",") ")" _
         "->" _
         "(" return_name:(_ i:identifier() _ {i}) ")" _
         "{" _ "\n"
-        statements:statements()
+        statements()
         _ "}" _ "\n" _
         {
             FunctionExpr {
                 name,
                 params_names,
                 return_name,
-                statements,
+                statements: arena,
             }
         }
 
-    rule statements() -> VecExpr<'input>
-        = s:(statement()*) { s }
-
+    // rule statements() -> VecExpr<'input>
+    //     = s:(statement()*) { s }
+    //
     // rule statements() -> VecExpr<'input> = s:statements_loop()
     //     { s.into_inner() }
     // rule statements_loop() -> RefCell<VecExpr<'input>> =
@@ -30,9 +30,8 @@ peg::parser!(pub grammar parser<'a>(arena: &Ast<'input>) for str {
     // rule statements_last() -> RefCell<VecExpr<'input>> =
     //     _ { RefCell::new(VecExpr::new()) }
 
-
-    rule statement() -> Expr<'input>
-        = _ e:expression() _ "\n" { e }
+    rule statements() = statement() statements() / _()
+    rule statement() = _ e:expression() _ "\n" { arena.push(e); }
 
     rule expression() -> Expr<'input>
         = if_else()
@@ -42,22 +41,21 @@ peg::parser!(pub grammar parser<'a>(arena: &Ast<'input>) for str {
 
     rule if_else() -> Expr<'input> = precedence! {
         "if" _ e:expression() _ "{" _ "\n"
-            then_body:statements() _
+            statements() _
         "}" _ "else" _ "{" _ "\n"
-            else_body:statements() _
+            statements() _
         "}"
-        { Expr::IfElse(arena.push(e), arena.push_all(&then_body), arena.push_all(&else_body)) }
+        { Expr::IfElse(arena.push(e), 4, 3) }
 
         "if" _ e:expression() _ "{" _ "\n"
-            then_body:statements() _
+            statements() _
         "}" _ "else" _ else_body:if_else()
-        { Expr::IfElseIf(arena.push(e), arena.push_all(&then_body), arena.push(else_body)) }
+        { Expr::IfElseIf(arena.push(e), 2, arena.push(else_body)) }
     }
 
-    rule while_loop() -> Expr<'input>
-        = "while" _ e:expression() _ "{" _ "\n"
-        loop_body:statements() _ "}"
-        { Expr::WhileLoop(arena.push(e), arena.push_all(&loop_body)) }
+    rule while_loop() -> Expr<'input> =
+        "while" _ e:expression() _ "{" _ "\n" statements() _ "}"
+        { Expr::WhileLoop(arena.push(e), 1) }
 
     rule assignment() -> Expr<'input>
         = i:identifier() _ "=" _ e:expression() {Expr::Assign(i, arena.push(e))}
