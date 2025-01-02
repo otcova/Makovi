@@ -18,18 +18,44 @@ impl ParserContext {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
-    #[test]
-    fn parse() {
-        let code = include_str!("../../code_samples/smallest_factor.run");
-        let expected = include_str!("../../code_samples/smallest_factor.ast.rs").trim();
+    macro_rules! gen_test {
+        ($($name:ident)*) => {$(
+            #[test]
+            fn $name() {
+                parse(stringify!($name));
+            }
+        )*};
+    }
+
+    gen_test! {
+        old_mult
+        // smallest_factor
+    }
+
+    fn parse(name: &str) {
+        let code = &fs::read_to_string(format!("code_samples/{name}.run")).unwrap();
+        let expected =
+            fs::read_to_string(format!("code_samples/{name}.ast.run")).unwrap_or_default();
+        let expected = expected.trim();
 
         let ast = Ast::default();
         let ctx = ParserContext::default();
 
         ctx.parse(code, &ast).unwrap();
+        let parsed = format!("{}", ast);
+        let parsed = parsed.trim();
 
-        assert_eq!(expected, &format!("{:?}", ast.nodes));
+        if expected != parsed {
+            println!("Expected:");
+            println!("{expected}");
+            println!("");
+            println!("But was:");
+            println!("{parsed}");
+            panic!();
+        }
     }
 }

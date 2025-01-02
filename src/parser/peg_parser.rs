@@ -18,8 +18,11 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
             }
         }
 
-    rule statements() = statement() statements() / _()
-    rule statement() = _ expression() _ "\n"
+    rule statements() -> ExprPtr = statements_list() / empty_code_block()
+    rule statements_list() -> ExprPtr = statement:statement() next_statement:statements()
+        { arena.push(Expr::Statements(statement, next_statement)) }
+    rule empty_code_block() -> ExprPtr = _ { NULL_EXPR_PTR }
+    rule statement() -> ExprPtr = _ e:expression() _ "\n" { e }
 
     rule expression() -> ExprPtr =
         if_statement()
@@ -30,22 +33,22 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
     rule if_statement() -> ExprPtr = if_else() / if_else_if()
 
     rule if_else() -> ExprPtr =
-        "if" _ e:expression() _ "{" _ "\n"
-            statements() _
+        "if" _ condition:expression() _ "{" _ "\n"
+            if_body:statements() _
         "}" _ "else" _ "{" _ "\n"
-            statements() _
+            else_body:statements() _
         "}"
-        { arena.push(Expr::IfElse(e, 4, 3)) }
+        { arena.push(Expr::IfElse(condition, if_body, else_body)) }
 
     rule if_else_if() -> ExprPtr =
-        "if" _ e:expression() _ "{" _ "\n"
-            statements() _
-        "}" _ "else" _ else_body:if_statement()
-        { arena.push(Expr::IfElseIf(e, 2, else_body)) }
+        "if" _ condition:expression() _ "{" _ "\n"
+            body:statements() _
+        "}" _ "else" _ if_else:if_statement()
+        { arena.push(Expr::IfElseIf(condition, body, if_else)) }
 
     rule while_loop() -> ExprPtr =
-        "while" _ e:expression() _ "{" _ "\n" statements() _ "}"
-        { arena.push(Expr::WhileLoop(e, 1)) }
+        "while" _ e:expression() _ "{" _ "\n" body:statements() _ "}"
+        { arena.push(Expr::WhileLoop(e, body)) }
 
     rule assignment() -> ExprPtr
         = i:identifier() _ "=" _ e:expression() { arena.push(Expr::Assign(i, e)) }
@@ -67,7 +70,7 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
         a:@ _ "mod" _ "(" _ b:expression() _ ")" { arena.push(Expr::Mod(a, b)) }
         a:@ _ "mod" _ b:(@) { arena.push(Expr::Mod(a, b)) }
         --
-        i:identifier() _ "(" ((_ expression() _ ) ** ",") ")" { arena.push(Expr::Call(i, 7)) }
+        i:identifier() _ "(" ((_ expression() _ ) ** ",") ")" { arena.push(Expr::Call(i, NULL_EXPR_PTR)) }
         i:identifier() { arena.push(Expr::Identifier(i)) }
         l:literal() { l }
     }

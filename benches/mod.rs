@@ -11,14 +11,6 @@ fn bench_big_function(b: &mut Bencher) {
     let arena = Ast::default();
     let parser = ParserContext::default();
 
-    {
-        let _f = parser.parse(source, &arena).unwrap();
-        println!("Nodes: {:?}", arena.nodes.borrow().len());
-        println!("----------");
-        println!("{:?}", arena.nodes);
-        println!("----------");
-    }
-
     b.iter(|| {
         arena.clear();
         parser.parse(source, &arena).unwrap()

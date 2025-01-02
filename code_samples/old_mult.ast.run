@@ -1,0 +1,33 @@
+if
+| Lt(0, 1)
+| (A)
+| | Identifier("a")
+| (B)
+| | Identifier("b")
+then
+| result =
+else
+| iterations =
+| | Identifier("b")
+| WhileLoop(12, 22)
+| (A)
+| | Gt(10, 11)
+| | (A)
+| | | Identifier("iterations")
+| | (B)
+| | | Literal("1")
+| (B)
+| | a =
+| | | Add(13, 14)
+| | | (A)
+| | | | Identifier("a")
+| | | (B)
+| | | | Identifier("a")
+| | iterations =
+| | | Sub(17, 18)
+| | | (A)
+| | | | Identifier("iterations")
+| | | (B)
+| | | | Literal("1")
+| result =
+| | Identifier("a")
