@@ -18,18 +18,6 @@ peg::parser!(pub grammar parser<'a>(arena: &'input Ast<'input>) for str {
             }
         }
 
-    // rule statements() -> VecExpr<'input>
-    //     = s:(statement()*) { s }
-    //
-    // rule statements() -> VecExpr<'input> = s:statements_loop()
-    //     { s.into_inner() }
-    // rule statements_loop() -> RefCell<VecExpr<'input>> =
-    //     statements_iter() / statements_last()
-    // rule statements_iter() -> RefCell<VecExpr<'input>> =
-    //     s:statement() vec:statements_loop() { vec.borrow_mut().push(s); vec }
-    // rule statements_last() -> RefCell<VecExpr<'input>> =
-    //     _ { RefCell::new(VecExpr::new()) }
-
     rule statements() = statement() statements() / _()
     rule statement() = _ e:expression() _ "\n" { arena.push(e); }
 
