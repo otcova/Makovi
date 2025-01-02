@@ -30,7 +30,8 @@ pub struct FunctionExpr<'a> {
     pub name: &'a str,
     pub params_names: Vec<&'a str>,
     pub return_name: &'a str,
-    pub statements: &'a Ast<'a>,
+    // pub statements: &'a Ast<'a>,
+    pub statements: Vec<AstNode<'a>>,
 }
 
 #[derive(Debug)]
@@ -46,12 +47,6 @@ impl Default for Ast<'_> {
     }
 }
 
-impl Ast<'_> {
-    pub fn clear(&mut self) {
-        self.nodes.borrow_mut().clear();
-    }
-}
-
 // pub type VecExpr<'a> = smallvec::SmallVec<Expr<'a>, 2>;
 pub type VecExpr<'a> = Vec<Expr<'a>>;
 
@@ -59,10 +54,35 @@ pub type ExprPtr = u32;
 pub type ExprVecPtr = u32;
 
 impl<'a> Ast<'a> {
-    pub fn push(&self, expr: Expr<'a>) -> ExprPtr {
+    pub fn push(&'a self, expr: Expr<'a>) -> AstNode<'a> {
         let mut data = self.nodes.borrow_mut();
+        let ptr = data.len() as ExprPtr;
         data.push(expr);
-        (data.len() - 1) as ExprPtr
+
+        AstNode {
+            ast: self,
+            expr: ptr,
+            min_expr: ptr,
+        }
+    }
+
+    pub fn push1(&'a self, n: AstNode<'a>, expr: impl Fn(ExprPtr) -> Expr<'a>) -> AstNode<'a> {
+        let min = n.min_expr;
+        let mut node = self.push(expr(n.unwrap()));
+        node.min_expr = ExprPtr::min(node.min_expr, min);
+        node
+    }
+
+    pub fn push2(
+        &'a self,
+        n1: AstNode<'a>,
+        n2: AstNode<'a>,
+        expr: fn(ExprPtr, ExprPtr) -> Expr<'a>,
+    ) -> AstNode<'a> {
+        let min = ExprPtr::min(n1.min_expr, n2.min_expr);
+        let mut node = self.push(expr(n1.unwrap(), n2.unwrap()));
+        node.min_expr = ExprPtr::min(node.min_expr, min);
+        node
     }
 
     pub fn push_all(&self, exprs: &[Expr<'a>]) -> ExprVecPtr {
@@ -77,7 +97,35 @@ impl<'a> Ast<'a> {
         len as ExprPtr
     }
 
+    pub fn clear(&self) {
+        self.nodes.borrow_mut().clear();
+    }
+
     // fn get(&self, index: ExprPtr) -> Expr {
     //     self.data.borrow()[index as usize].clone()
     // }
+}
+
+#[derive(Debug)]
+pub struct AstNode<'a> {
+    ast: &'a Ast<'a>,
+    expr: ExprPtr,
+    min_expr: ExprPtr,
+}
+
+// impl Drop for AstNode<'_> {
+//     fn drop(&mut self) {
+//         // if self.expr < ExprPtr::MAX {
+//         //     assert_eq!(self.expr as usize, self.ast.nodes.borrow().len() - 1);
+//         //     self.ast.nodes.borrow_mut().pop();
+//         // }
+//         self.ast.nodes.borrow_mut().truncate(self.min_expr as usize);
+//     }
+// }
+
+impl AstNode<'_> {
+    fn unwrap(mut self) -> ExprPtr {
+        // self.min_expr = ExprPtr::MAX;
+        self.expr
+    }
 }
