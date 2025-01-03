@@ -1,21 +1,21 @@
 function multiply("a", "b") -> "result"
-| if Lt
-| | (Lhs) Identifier("a")
-| | (Rhs) Identifier("b")
+| if  lhs < rhs
+| | (lhs) Identifier("a")
+| | (rhs) Identifier("b")
 | then
 | | result = multiply(...)
 | | | | Identifier("b")
 | | | | Identifier("a")
 | else
 | | iterations = Identifier("b")
-| | while Gt
-| | | (Lhs) Identifier("iterations")
-| | | (Rhs) Literal("1")
+| | while  lhs > rhs
+| | | (lhs) Identifier("iterations")
+| | | (rhs) Literal("1")
 | | then
-| | | a = Add
-| | | | (Lhs) Identifier("a")
-| | | | (Rhs) Identifier("a")
-| | | iterations = Sub
-| | | | (Lhs) Identifier("iterations")
-| | | | (Rhs) Literal("1")
+| | | a =  lhs + rhs
+| | | | (lhs) Identifier("a")
+| | | | (rhs) Identifier("a")
+| | | iterations =  lhs - rhs
+| | | | (lhs) Identifier("iterations")
+| | | | (rhs) Literal("1")
 | | result = Identifier("a")
