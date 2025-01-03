@@ -1,34 +1,30 @@
 macro_rules! gen_tests {
-    (fn($b:ident, $code:ident, $test_name_var:ident) $test:block) => {
-        gen_tests!{
-            fn($b, $code, $test_name_var, input: In, output: Out) $test
+    ($generic_test:ident(bench, code, test_name)) => {
+        gen_tests!(generic_test_wrapper(bench, code, test_name, input, output));
+
+        fn generic_test_wrapper<In, Out>(b: &mut Bencher, code: &str, name: &str, _: In, _: Out) {
+            $generic_test(b, code, name);
         }
     };
-    (fn($b:ident, $code:ident, $test_name_var:ident, $input:ident:$In:ident, $output:ident:$Out:ident) $test:block) => {
+    ($generic_test:ident(bench, code, test_name, input, output)) => {
         gen_tests!{
+            #$generic_test
             old_mult(2, 5) = 10;
             smallest_factor(53 * 59) = 53;
-            #fn($b, $code, $test_name_var, $input:$In, $output:$Out) $test
         }
     };
     (
+        #$generic_test:ident
         $($test_name:ident($($params:expr),*) = $result:expr;)*
-        #fn($b:ident, $code:ident, $test_name_var:ident, $input:ident:$In:ident, $output:ident:$Out:ident) $test:block
     ) => {
-
         $(
         #[bench]
         fn $test_name(b: &mut test::Bencher) {
             let name = stringify!($test_name);
             let code = &load_src(name, "");
-            generic_test(b, code, name, ($($params),*), $result);
+            $generic_test(b, code, name, ($($params),*), $result);
         }
         )*
-
-        #[allow(unused_variables)]
-        fn generic_test<$In: Clone, $Out: PartialEq + std::fmt::Debug>($b: &mut test::Bencher, $code: &str, $test_name_var: &str, $input: $In, $output: $Out) {
-            $test
-        }
     };
 }
 

@@ -51,17 +51,29 @@ impl<In, Out> MakoviJit<In, Out> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
+
+    use test::Bencher;
+
     use super::*;
     use crate::utils::test_utils::*;
 
-    // fn test_file<I, O>(b: &mut Bencher, code: &str, name: &str) {
+    gen_tests!(generic_test(bench, code, test_name, input, output));
 
-    gen_tests! {
-    fn(b, code, test_name, input: In, expected_output: Out) {
+    fn generic_test<In, Out>(
+        b: &mut Bencher,
+        code: &str,
+        _test_name: &str,
+        input: In,
+        expected_output: Out,
+    ) where
+        In: Clone,
+        Out: Debug + PartialEq,
+    {
         b.iter(|| {
             let mut jit = MakoviJit::<In, Out>::default();
             jit.load_code(code).unwrap();
             assert_eq!(expected_output, jit.run_code(input.clone()));
         });
-    }}
+    }
 }
