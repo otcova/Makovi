@@ -68,3 +68,39 @@ impl Jit {
         Ok(code)
     }
 }
+
+#[cfg(test)]
+mod run {
+    use super::*;
+    use crate::utils::test_utils::*;
+    use ::test::*;
+    use std::fmt::Debug;
+
+    gen_tests!(generic_test(bench, code, test_name, input, output));
+
+    fn generic_test<In, Out>(
+        b: &mut Bencher,
+        code: &str,
+        _test_name: &str,
+        input: In,
+        expected_output: Out,
+    ) where
+        In: Clone,
+        Out: Debug + PartialEq,
+    {
+        let mut parser = ParserContext::default();
+        let ast = parser.parse(code).unwrap();
+
+        let mut jit = Jit::default();
+        let ptr = jit.compile(&ast).unwrap();
+
+        let jit_fn = unsafe { std::mem::transmute::<*const u8, fn(In) -> Out>(ptr) };
+
+        assert_eq!(expected_output, jit_fn(black_box(input.clone())));
+
+        b.iter(|| jit_fn(black_box(input.clone())));
+
+        // Check for wierd inner state
+        assert_eq!(expected_output, jit_fn(black_box(input.clone())));
+    }
+}
