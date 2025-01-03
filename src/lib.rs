@@ -1,3 +1,4 @@
+#![feature(vec_into_raw_parts)]
 #![cfg_attr(test, feature(test))]
 
 #[cfg(test)]
@@ -6,39 +7,35 @@ extern crate test;
 mod ir;
 mod jit;
 mod parser;
-
-#[cfg(test)]
-mod test_utils;
+mod utils;
 
 use jit::*;
 use parser::*;
 
-pub struct MakoviJIT<In, Out> {
+pub struct MakoviJit<In, Out> {
     parser: ParserContext,
-    jit: JIT,
+    jit: Jit,
     fn_ptr: fn(In) -> Out,
 }
 
-impl<In, Out> Default for MakoviJIT<In, Out> {
+impl<In, Out> Default for MakoviJit<In, Out> {
     fn default() -> Self {
-        MakoviJIT {
-            jit: JIT::default(),
+        MakoviJit {
+            jit: Jit::default(),
             parser: ParserContext::default(),
             fn_ptr: |_| panic!("Function not loaded!"),
         }
     }
 }
 
-impl<In, Out> MakoviJIT<In, Out> {
+impl<In, Out> MakoviJit<In, Out> {
     pub fn gen_ir(&mut self, code: &str) -> Result<String, String> {
-        let ast = Ast::default();
-        self.parser.parse(code, &ast)?;
+        let ast = self.parser.parse(code)?;
         self.jit.gen_ir(&ast)
     }
 
     pub fn load_code(&mut self, code: &str) -> Result<(), String> {
-        let ast = Ast::default();
-        self.parser.parse(code, &ast)?;
+        let ast = self.parser.parse(code)?;
         let ptr = self.jit.compile(&ast)?;
 
         unsafe {
@@ -55,34 +52,16 @@ impl<In, Out> MakoviJIT<In, Out> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::*;
+    use crate::utils::test_utils::*;
 
     // fn test_file<I, O>(b: &mut Bencher, code: &str, name: &str) {
 
     gen_tests! {
     fn(b, code, test_name, input: In, expected_output: Out) {
         b.iter(|| {
-            let mut jit = MakoviJIT::<In, Out>::default();
+            let mut jit = MakoviJit::<In, Out>::default();
             jit.load_code(code).unwrap();
             assert_eq!(expected_output, jit.run_code(input.clone()));
         });
     }}
 }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::test_utils::*;
-//
-//     gen_tests! {
-//     fn(b, code, test_name, input: In, expected_output: Out) {
-//         let mut jit = MakoviJIT::<In, Out>::default();
-//         jit.load_code(code).unwrap();
-//         assert_eq!(expected_output, jit.run_code(input));
-//
-//         b.iter(|| {
-//             ast.clear();
-//             parser.parse(code, &ast).unwrap()
-//         });
-//     }}
-// }

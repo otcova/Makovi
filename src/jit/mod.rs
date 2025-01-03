@@ -2,18 +2,14 @@ use crate::ir::*;
 use crate::parser::*;
 use cranelift::prelude::*;
 use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::{DataDescription, Linkage, Module};
-use std::slice;
+use cranelift_module::Module;
 
 /// The basic JIT class.
-pub struct JIT {
-    code: CodeIR<JITModule>,
-
-    /// The data description, which is to data objects what `ctx` is to functions.
-    data_description: DataDescription,
+pub struct Jit {
+    code: CodeIr<JITModule>,
 }
 
-impl Default for JIT {
+impl Default for Jit {
     fn default() -> Self {
         let mut flag_builder = settings::builder();
         flag_builder.set("use_colocated_libcalls", "false").unwrap();
@@ -28,20 +24,17 @@ impl Default for JIT {
 
         let module = JITModule::new(builder);
 
-        let code = CodeIR {
+        let code = CodeIr {
             ctx: module.make_context(),
             builder_context: FunctionBuilderContext::new(),
             module,
         };
 
-        Self {
-            code,
-            data_description: DataDescription::new(),
-        }
+        Self { code }
     }
 }
 
-impl JIT {
+impl Jit {
     pub fn gen_ir<'a>(&mut self, ast: &'a Ast<'a>) -> Result<String, String> {
         self.code.load(ast)?;
         Ok(self.code.write_ir())
@@ -73,27 +66,5 @@ impl JIT {
         let code = self.code.module.get_finalized_function(id);
 
         Ok(code)
-    }
-
-    /// Create a zero-initialized data section.
-    pub fn create_data(&mut self, name: &str, contents: Vec<u8>) -> Result<&[u8], String> {
-        // The steps here are analogous to `compile`, except that data is much
-        // simpler than functions.
-        self.data_description.define(contents.into_boxed_slice());
-        let id = self
-            .code
-            .module
-            .declare_data(name, Linkage::Export, true, false)
-            .map_err(|e| e.to_string())?;
-
-        self.code
-            .module
-            .define_data(id, &self.data_description)
-            .map_err(|e| e.to_string())?;
-        self.data_description.clear();
-        self.code.module.finalize_definitions().unwrap();
-        let buffer = self.code.module.get_finalized_data(id);
-        // TODO: Can we move the unsafe into cranelift?
-        Ok(unsafe { slice::from_raw_parts(buffer.0, buffer.1) })
     }
 }

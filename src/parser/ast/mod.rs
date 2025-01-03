@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Display};
+use std::{fmt::Display, mem};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Expr<'a> {
@@ -17,13 +17,22 @@ pub enum Expr<'a> {
     Mul(ExprPtr, ExprPtr),
     Div(ExprPtr, ExprPtr),
     Mod(ExprPtr, ExprPtr),
-    /// (if_condition, if_body, else_body)
-    IfElse(ExprPtr, ExprVecPtr, ExprVecPtr),
-    WhileLoop(ExprPtr, ExprVecPtr),
+    IfElse {
+        condition: ExprPtr,
+        then_body: ExprVecPtr,
+        else_body: ExprVecPtr,
+    },
+    WhileLoop {
+        condition: ExprPtr,
+        body: ExprVecPtr,
+    },
     Call(&'a str, ExprVecPtr),
-    GlobalDataAddr(&'a str),
-    /// (function_name, parameters, return_name)
-    Function(&'a str, ExprPtr, ExprPtr, ExprPtr),
+    Function {
+        name: &'a str,
+        parameters: ExprPtr,
+        return_name: ExprPtr,
+        body: ExprPtr,
+    },
 
     /// Linked lists: (line, next_line)
     Statements(ExprPtr, ExprPtr),
@@ -31,18 +40,18 @@ pub enum Expr<'a> {
     ParametersDefinition(ExprPtr, ExprPtr),
 }
 
-#[derive(Debug)]
-pub struct Ast<'a> {
-    pub nodes: RefCell<Vec<Expr<'a>>>,
+pub struct AstContext {
+    nodes_buffer: Vec<Expr<'static>>,
 }
 
-impl Default for Ast<'_> {
-    fn default() -> Self {
-        Self {
-            nodes: RefCell::new(Vec::with_capacity(256)),
-        }
-    }
+pub struct Ast<'c> {
+    context: &'c mut AstContext,
+    nodes: Vec<Expr<'c>>,
 }
+
+pub type ExprPtr = u32;
+pub type ExprVecPtr = u32;
+pub const NULL_EXPR_PTR: ExprPtr = ExprPtr::MAX;
 
 struct AstList<'a> {
     ast: &'a Ast<'a>,
@@ -68,43 +77,68 @@ impl<'a> Iterator for AstList<'a> {
     }
 }
 
-pub type ExprPtr = u32;
-pub type ExprVecPtr = u32;
-pub const NULL_EXPR_PTR: ExprPtr = ExprPtr::MAX;
+impl Default for AstContext {
+    fn default() -> Self {
+        Self {
+            nodes_buffer: Vec::with_capacity(256),
+        }
+    }
+}
 
-impl<'a> Ast<'a> {
-    pub fn push(&'a self, expr: Expr<'a>) -> ExprPtr {
-        let mut data = self.nodes.borrow_mut();
-        data.push(expr);
-        (data.len() - 1) as ExprPtr
+impl AstContext {
+    pub fn create_ast(&mut self) -> Ast {
+        Ast {
+            nodes: mem::take(&mut self.nodes_buffer),
+            context: self,
+        }
+    }
+}
+
+impl Drop for Ast<'_> {
+    fn drop(&mut self) {
+        self.context.nodes_buffer = {
+            self.nodes.clear();
+            let (ptr, _, cap) = mem::take(&mut self.nodes).into_raw_parts();
+
+            // The cast is necessary to change the lifetime
+            #[allow(clippy::unnecessary_cast)]
+            let ptr = ptr as *mut Expr<'static>;
+
+            // SAFETY:
+            // - `cap` is valid because comes from `Vec::into_parts_with_alloc`
+            // - `ptr` is valid because comes from `Vec::<U, Global>::into_parts_with_alloc` where
+            // U has the same type with diferent lifetime. And because the vector has been cleared, the lifetime does not matter.
+            // - `length` is valid size it's zero after the `vec.clear`
+            unsafe { Vec::from_raw_parts(ptr, 0, cap) }
+        }
+    }
+}
+
+impl<'c> Ast<'c> {
+    pub fn push(&mut self, expr: Expr<'c>) -> ExprPtr {
+        self.nodes.push(expr);
+        (self.nodes.len() - 1) as ExprPtr
     }
 
-    pub fn push_all(&self, exprs: &[Expr<'a>]) -> ExprVecPtr {
-        self.nodes.borrow_mut().extend_from_slice(exprs);
-        exprs.len() as ExprPtr
+    pub fn get(&self, index: ExprPtr) -> Expr<'c> {
+        self.nodes[index as usize]
     }
 
-    pub fn push_vec(&self, mut exprs: Vec<Expr<'a>>) -> ExprVecPtr {
-        let len = exprs.len();
-
-        self.nodes.borrow_mut().append(&mut exprs);
-        len as ExprPtr
+    pub fn root(&self) -> Option<Expr<'c>> {
+        self.nodes.last().copied()
     }
 
-    pub fn clear(&self) {
-        self.nodes.borrow_mut().clear();
-    }
-
-    pub fn get(&self, index: ExprPtr) -> Expr<'a> {
-        self.nodes.borrow()[index as usize]
-    }
-
-    pub fn root(&self) -> Option<Expr<'a>> {
-        self.nodes.borrow().last().copied()
-    }
-
-    pub fn iter_list(&'a self, node: ExprPtr) -> impl Iterator<Item = Expr<'a>> {
+    pub fn iter_list(&'c self, node: ExprPtr) -> impl Iterator<Item = Expr<'c>> {
         AstList { ast: self, node }
+    }
+
+    pub fn iter_nodes<'r>(&'r self) -> impl Iterator<Item = Expr<'c>> + 'r {
+        self.nodes.iter().copied()
+    }
+
+    #[allow(dead_code)]
+    pub fn size(&self) -> usize {
+        self.nodes.len()
     }
 
     fn print_ast(
@@ -122,7 +156,12 @@ impl<'a> Ast<'a> {
         let prefix = if start_with_prefix { ind } else { "" };
 
         match self.get(expr) {
-            Expr::Function(name, parameters, return_name, body) => {
+            Expr::Function {
+                name,
+                parameters,
+                return_name,
+                body,
+            } => {
                 write!(f, "{prefix}function {name}(")?;
                 self.print_ast(f, parameters, indent + 2, false)?;
                 write!(f, ") -> ")?;
@@ -130,12 +169,16 @@ impl<'a> Ast<'a> {
                 writeln!(f)?;
                 self.print_ast(f, body, indent + 1, true)?;
             }
-            Expr::IfElse(condition, body, else_body) => {
+            Expr::IfElse {
+                condition,
+                then_body,
+                else_body,
+            } => {
                 write!(f, "{prefix}if ")?;
                 self.print_ast(f, condition, indent + 1, false)?;
                 writeln!(f, "{ind}then")?;
-                self.print_ast(f, body, indent + 1, true)?;
-                if let Expr::IfElse(..) = self.get(else_body) {
+                self.print_ast(f, then_body, indent + 1, true)?;
+                if let Expr::IfElse { .. } = self.get(else_body) {
                     write!(f, "{ind}else ")?;
                     self.print_ast(f, else_body, indent, false)?;
                 } else {
@@ -143,7 +186,7 @@ impl<'a> Ast<'a> {
                     self.print_ast(f, else_body, indent + 1, true)?;
                 }
             }
-            Expr::WhileLoop(condition, body) => {
+            Expr::WhileLoop { condition, body } => {
                 write!(f, "{prefix}while ")?;
                 self.print_ast(f, condition, indent + 1, false)?;
                 writeln!(f, "{ind}then")?;
@@ -174,7 +217,7 @@ impl<'a> Ast<'a> {
                     writeln!(f)?;
                 }
             }
-            Expr::Literal(..) | Expr::Identifier(..) | Expr::GlobalDataAddr(..) => {
+            Expr::Literal(..) | Expr::Identifier(..) => {
                 writeln!(f, "{prefix}{:?}", self.get(expr))?;
             }
             Expr::Eq(a, b)
@@ -203,7 +246,7 @@ impl<'a> Ast<'a> {
 
 impl Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let root = (self.nodes.borrow().len() - 1) as ExprPtr;
+        let root = (self.nodes.len() - 1) as ExprPtr;
         self.print_ast(f, root, 0, true)
     }
 }

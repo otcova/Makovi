@@ -1,30 +1,40 @@
 mod ast;
 mod peg_parser;
 
+use std::cell::RefCell;
+
 pub use ast::*;
 use peg_parser::parser;
 
 #[derive(Default)]
-pub struct ParserContext {}
+pub struct ParserContext {
+    ast_context: AstContext,
+}
 
 impl ParserContext {
-    pub fn parse<'c>(&'c self, code: &'c str, ast: &'c Ast<'c>) -> Result<(), String> {
-        parser::function(code, ast).map_err(|e| format!("Parsing error: {}", e))?;
-        Ok(())
+    pub fn parse<'c>(&'c mut self, code: &'c str) -> Result<Ast<'c>, String> {
+        let mut ast = self.ast_context.create_ast();
+        parser::function(code, &RefCell::new(&mut ast))
+            .map_err(|e| format!("Parsing error: {}", e))?;
+        Ok(ast)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::*;
+    use crate::utils::test_utils::*;
+    use ::test::*;
 
     gen_tests! {
     fn(b, code, test_name) {
-        let ast = Ast::default();
-        let parser = ParserContext::default();
+        let mut parser = ParserContext::default();
 
-        parser.parse(code, &ast).unwrap();
+            {
+        // We parse twice to test that the context cache is cleared
+        parser.parse(code).unwrap();
+        let ast = parser.parse(code).unwrap();
+
         let parsed = format!("{}", ast);
 
         let expected = &load_src(test_name, ".ast");
@@ -36,10 +46,11 @@ mod tests {
             println!("{parsed}");
             panic!();
         }
+        }
 
         b.iter(|| {
-            ast.clear();
-            parser.parse(code, &ast).unwrap()
+            let ast = parser.parse(code).unwrap();
+            black_box(ast).size()
         });
     }}
 }

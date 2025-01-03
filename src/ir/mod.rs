@@ -7,7 +7,7 @@ use cranelift::prelude::*;
 use cranelift_module::{FuncId, Linkage, Module};
 use std::collections::HashMap;
 
-pub struct CodeIR<M: Module> {
+pub struct CodeIr<M: Module> {
     pub module: M,
     pub ctx: Context,
     pub builder_context: FunctionBuilderContext,
@@ -23,7 +23,7 @@ pub struct FunctionTranslator<'a, 'b, M: Module> {
 
 type ExprValue = Option<Value>;
 
-impl<M: Module> CodeIR<M> {
+impl<M: Module> CodeIr<M> {
     pub fn write_ir(&self) -> String {
         let mut ir = String::new();
         write_function(&mut ir, &self.ctx.func).unwrap();
@@ -32,9 +32,12 @@ impl<M: Module> CodeIR<M> {
 
     pub fn load<'a>(&mut self, ast: &'a Ast<'a>) -> Result<FuncId, String> {
         match ast.root().unwrap() {
-            Expr::Function(name, params, return_name, body) => {
-                self.load_function(ast, name, params, return_name, body)
-            }
+            Expr::Function {
+                name,
+                parameters,
+                return_name,
+                body,
+            } => self.load_function(ast, name, parameters, return_name, body),
             _ => Err("Expected a single top function".to_owned()),
         }
     }
@@ -98,7 +101,7 @@ impl<M: Module> CodeIR<M> {
             &mut builder,
             params_names,
             return_name,
-            ast.nodes.borrow().iter().copied(),
+            ast.iter_nodes(),
             entry_block,
         );
 

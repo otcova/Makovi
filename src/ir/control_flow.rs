@@ -13,7 +13,6 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         match expr {
             Expr::Literal(literal) => self.literal(literal),
             Expr::Identifier(name) => self.identifier(name),
-            Expr::IdentifierDefinition(_) => unreachable!(),
             Expr::Assign(name, value) => self.eval1(value, |s, v| s.assign(name, v)),
             Expr::Eq(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.eq(l, r)),
             Expr::Ne(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.ne(l, r)),
@@ -26,15 +25,19 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
             Expr::Mul(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.mul(l, r)),
             Expr::Div(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.div(l, r)),
             Expr::Mod(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.module(l, r)),
-            Expr::IfElse(condition, if_block, else_block) => {
+            Expr::IfElse {
+                condition,
+                then_body,
+                else_body,
+            } => {
                 let condition = self.translate(condition);
                 self.if_else(
                     condition,
-                    |s| s.translate(if_block),
-                    |s| s.translate(else_block),
+                    |s| s.translate(then_body),
+                    |s| s.translate(else_body),
                 )
             }
-            Expr::WhileLoop(condition, body) => {
+            Expr::WhileLoop { condition, body } => {
                 self.while_loop(|s| s.translate(condition), |s| s.translate(body));
                 None
             }
@@ -46,8 +49,6 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
                 let parameters = Self::prepare_parameters(parameters);
                 self.call(name, &parameters)
             }
-            Expr::GlobalDataAddr(_) => todo!(),
-            Expr::Function(name, parameters, return_def, body) => unreachable!(),
             Expr::Statements(expr, next) => {
                 if next == NULL_EXPR_PTR {
                     self.translate(expr)
@@ -56,8 +57,12 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
                     self.translate(next)
                 }
             }
-            Expr::Parameters(parameter, next) => unreachable!(),
-            Expr::ParametersDefinition(parameter, next) => unreachable!(),
+            Expr::IdentifierDefinition(..)
+            | Expr::Function { .. }
+            | Expr::Parameters(..)
+            | Expr::ParametersDefinition(..) => {
+                unreachable!()
+            }
         }
     }
 
