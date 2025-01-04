@@ -1,6 +1,6 @@
 use super::*;
 
-impl<M: Module> FunctionTranslator<'_, '_, M> {
+impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
     pub fn translate(&mut self, expr: ExprPtr) -> ExprValue {
         if expr == NULL_EXPR_PTR {
             None
@@ -9,22 +9,25 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         }
     }
 
-    fn translate_expr(&mut self, expr: Expr) -> ExprValue {
+    fn translate_expr(&mut self, expr: Expr<'a>) -> ExprValue {
         match expr {
             Expr::Literal(literal) => self.literal(literal),
             Expr::Identifier(name) => self.identifier(name),
-            Expr::Assign(name, value) => self.eval1(value, |s, v| s.assign(name, v)),
-            Expr::Eq(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.eq(l, r)),
-            Expr::Ne(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.ne(l, r)),
-            Expr::Lt(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.lt(l, r)),
-            Expr::Le(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.le(l, r)),
-            Expr::Gt(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.gt(l, r)),
-            Expr::Ge(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.ge(l, r)),
-            Expr::Add(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.add(l, r)),
-            Expr::Sub(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.sub(l, r)),
-            Expr::Mul(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.mul(l, r)),
-            Expr::Div(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.div(l, r)),
-            Expr::Mod(lhs, rhs) => self.eval2(lhs, rhs, |s, l, r| s.module(l, r)),
+            Expr::Assign(name, value) => {
+                let value = self.translate(value);
+                self.assign(name, value)
+            }
+            Expr::Eq(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.eq(l, r)),
+            Expr::Ne(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.ne(l, r)),
+            Expr::Lt(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.lt(l, r)),
+            Expr::Le(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.le(l, r)),
+            Expr::Gt(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.gt(l, r)),
+            Expr::Ge(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.ge(l, r)),
+            Expr::Add(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.add(l, r)),
+            Expr::Sub(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.sub(l, r)),
+            Expr::Mul(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.mul(l, r)),
+            Expr::Div(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.div(l, r)),
+            Expr::Mod(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.module(l, r)),
             Expr::IfElse {
                 condition,
                 then_body,
@@ -57,8 +60,10 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
                     self.translate(next)
                 }
             }
+            Expr::Function { .. } => {
+                todo!()
+            }
             Expr::IdentifierDefinition(..)
-            | Expr::Function { .. }
             | Expr::Parameters(..)
             | Expr::ParametersDefinition(..) => {
                 unreachable!()
@@ -66,17 +71,9 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         }
     }
 
-    fn eval1<F>(&mut self, a: ExprPtr, translation: F) -> ExprValue
+    fn operator<F>(&mut self, a: ExprPtr, b: ExprPtr, translation: F) -> ExprValue
     where
-        F: Fn(&mut Self, ExprValue) -> ExprValue,
-    {
-        let a = self.translate(a);
-        translation(self, a)
-    }
-
-    fn eval2<F>(&mut self, a: ExprPtr, b: ExprPtr, translation: F) -> ExprValue
-    where
-        F: Fn(&mut Self, ExprValue, ExprValue) -> ExprValue,
+        F: FnOnce(&mut Self, ExprValue, ExprValue) -> ExprValue,
     {
         let a = self.translate(a);
         let b = self.translate(b);

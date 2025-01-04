@@ -9,183 +9,115 @@ use std::collections::HashMap;
 
 pub struct CodeIr<M: Module> {
     pub module: M,
-    pub ctx: Context,
+    pub context: Context,
     pub builder_context: FunctionBuilderContext,
 }
 
-pub struct FunctionTranslator<'a, 'b, M: Module> {
-    pub int: types::Type,
-    pub builder: FunctionBuilder<'b>,
-    pub variables: HashMap<String, Variable>,
-    pub module: &'b mut M,
-    pub ast: &'a Ast<'a>,
+pub struct FunctionTranslator<'ast, 'build, M: Module> {
+    module: &'build mut M,
+    builder: FunctionBuilder<'build>,
+
+    variables: HashMap<&'ast str, Variable>,
+    ast: &'ast Ast<'ast>,
 }
 
 type ExprValue = Option<Value>;
 
 impl<M: Module> CodeIr<M> {
+    pub fn new(module: M) -> Self {
+        Self {
+            context: module.make_context(),
+            builder_context: FunctionBuilderContext::new(),
+            module,
+        }
+    }
+
     pub fn write_ir(&self) -> String {
         let mut ir = String::new();
-        write_function(&mut ir, &self.ctx.func).unwrap();
+        write_function(&mut ir, &self.context.func).unwrap();
         ir
     }
 
     pub fn load<'a>(&mut self, ast: &'a Ast<'a>) -> Result<FuncId, String> {
-        match ast.root().unwrap() {
-            Expr::Function {
-                name,
-                parameters,
-                return_name,
-                body,
-            } => self.load_function(ast, name, parameters, return_name, body),
-            _ => Err("Expected a single top function".to_owned()),
-        }
+        // We clear out the context state before using it.
+        self.module.clear_context(&mut self.context);
+
+        let id = self.translate_function(ast, ast.root().unwrap())?;
+
+        // Define the function to jit. This finishes compilation, although
+        // there may be outstanding relocations to perform. Currently, jit
+        // cannot finish relocations until all functions to be called are
+        // defined. For this toy demo for now, we'll just finalize the
+        // function below.
+        self.module
+            .define_function(id, &mut self.context)
+            .map_err(|e| format!("Compilation error: {}", e))?;
+
+        Ok(id)
     }
 
-    fn load_function<'a>(
+    fn translate_function<'a>(
         &mut self,
-        ast: &'a Ast<'a>,
-        function_name: &str,
-        params: u32,
-        return_node: u32,
-        function_body: u32,
+        ast: &Ast<'a>,
+        function: Expr<'a>,
     ) -> Result<FuncId, String> {
         let int = types::I64;
+        let Expr::Function {
+            name,
+            parameters,
+            return_expr,
+            body,
+        } = function
+        else {
+            unreachable!("Expected a function");
+        };
 
-        for _ in ast.iter_list(params) {
-            self.ctx
+        for _ in ast.iter_list(parameters) {
+            self.context
                 .func
                 .signature
                 .params
                 .push(cranelift::prelude::AbiParam::new(int));
         }
 
-        // Our toy language currently only supports one return value, though
-        // Cranelift is designed to support more.
-        self.ctx.func.signature.returns.push(AbiParam::new(int));
+        self.context.func.signature.returns.push(AbiParam::new(int));
 
-        // Create the builder to build a function.
-        let mut builder = FunctionBuilder::new(&mut self.ctx.func, &mut self.builder_context);
+        ////////////////
 
-        // Create the entry block, to start emitting code in.
-        let entry_block = builder.create_block();
+        let builder = FunctionBuilder::new(&mut self.context.func, &mut self.builder_context);
 
-        // Since this is the entry block, add block parameters corresponding to
-        // the function's parameters.
-        //
-        // TODO: Streamline the API here.
-        builder.append_block_params_for_function_params(entry_block);
-
-        // Tell the builder to emit code in this block.
-        builder.switch_to_block(entry_block);
-
-        // And, tell the builder that this block will have no further
-        // predecessors. Since it's the entry block, it won't have any
-        // predecessors.
-        builder.seal_block(entry_block);
-
-        let params_names = ast.iter_list(params).map(|expr| match expr {
+        let params_names = ast.iter_list(parameters).map(|expr| match expr {
             Expr::IdentifierDefinition(name) => name,
             _ => unreachable!(),
         });
 
-        let return_name = match ast.get(return_node) {
+        let return_name = match ast.get(return_expr) {
             Expr::IdentifierDefinition(name) => name,
             _ => unreachable!(),
         };
 
-        // The toy language allows variables to be declared implicitly.
-        // Walk the AST and declare all implicitly-declared variables.
-        let variables = declare_variables(
-            int,
-            &mut builder,
-            params_names,
-            return_name,
-            ast.iter_nodes(),
-            entry_block,
-        );
-
         let mut trans = FunctionTranslator {
-            int,
-            builder,
-            variables,
             module: &mut self.module,
+            builder,
+
+            variables: HashMap::new(),
             ast,
         };
 
-        trans.translate(function_body);
+        trans.function_declaration(params_names, return_name);
+        trans.translate(body);
 
-        // Set up the return variable of the function. Above, we declared a
-        // variable to hold the return value. Here, we just do a use of that
-        // variable.
-        let return_variable = trans.variables.get(return_name).unwrap();
-        let return_value = trans.builder.use_var(*return_variable);
+        let return_variable = trans.identifier(return_name);
+        trans.function_return(return_variable);
+        trans.seal();
 
-        // Emit the return instruction.
-        trans.builder.ins().return_(&[return_value]);
+        ////////////////
 
-        // Tell the builder we're done with this function.
-        trans.builder.finalize();
-
-        // Next, declare the function to jit. Functions must be declared
-        // before they can be called, or defined.
-        //
-        // TODO: This may be an area where the API should be streamlined; should
-        // we have a version of `declare_function` that automatically declares
-        // the function?
         let id = self
             .module
-            .declare_function(function_name, Linkage::Export, &self.ctx.func.signature)
+            .declare_function(name, Linkage::Export, &self.context.func.signature)
             .map_err(|e| format!("Compilation error: {}", e))?;
 
         Ok(id)
     }
-}
-
-fn declare_variables<'a>(
-    int: types::Type,
-    builder: &mut FunctionBuilder,
-    params: impl Iterator<Item = &'a str>,
-    the_return: &str,
-    function_body: impl Iterator<Item = Expr<'a>> + 'a,
-    entry_block: Block,
-) -> HashMap<String, Variable> {
-    let mut variables = HashMap::new();
-    let mut index = 0;
-
-    for (i, name) in params.enumerate() {
-        // TODO: cranelift_frontend should really have an API to make it easy to set
-        // up param variables.
-        let val = builder.block_params(entry_block)[i];
-        let var = declare_variable(int, builder, &mut variables, &mut index, name);
-        builder.def_var(var, val);
-    }
-    let zero = builder.ins().iconst(int, 0);
-    let return_variable = declare_variable(int, builder, &mut variables, &mut index, the_return);
-    builder.def_var(return_variable, zero);
-
-    for expr in function_body {
-        if let Expr::Assign(name, _) = expr {
-            declare_variable(int, builder, &mut variables, &mut index, name);
-        }
-    }
-
-    variables
-}
-
-/// Declare a single variable declaration.
-fn declare_variable(
-    int: types::Type,
-    builder: &mut FunctionBuilder,
-    variables: &mut HashMap<String, Variable>,
-    index: &mut usize,
-    name: &str,
-) -> Variable {
-    let var = Variable::new(*index);
-    if !variables.contains_key(name) {
-        variables.insert(name.into(), var);
-        builder.declare_var(var, int);
-        *index += 1;
-    }
-    var
 }

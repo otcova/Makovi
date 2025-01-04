@@ -32,7 +32,7 @@ pub enum Expr<'a> {
     Function {
         name: &'a str,
         parameters: ExprPtr,
-        return_name: ExprPtr,
+        return_expr: ExprPtr,
         body: ExprPtr,
     },
 
@@ -132,10 +132,6 @@ impl<'c> Ast<'c> {
 
     pub fn iter_list(&'c self, node: ExprPtr) -> impl Iterator<Item = Expr<'c>> {
         AstList { ast: self, node }
-    }
-
-    pub fn iter_nodes<'r>(&'r self) -> impl Iterator<Item = Expr<'c>> + 'r {
-        self.nodes.iter().copied()
     }
 
     #[allow(dead_code)]

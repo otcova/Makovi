@@ -34,7 +34,7 @@ impl Ast<'_> {
             Expr::Function {
                 name,
                 parameters,
-                return_name,
+                return_expr: return_name,
                 body,
             } => {
                 write!(f, "{prefix}function {name}(")?;

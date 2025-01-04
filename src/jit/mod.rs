@@ -2,7 +2,6 @@ use crate::ir::*;
 use crate::parser::*;
 use cranelift::prelude::*;
 use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::Module;
 
 /// The basic JIT class.
 pub struct Jit {
@@ -24,13 +23,9 @@ impl Default for Jit {
 
         let module = JITModule::new(builder);
 
-        let code = CodeIr {
-            ctx: module.make_context(),
-            builder_context: FunctionBuilderContext::new(),
-            module,
-        };
-
-        Self { code }
+        Self {
+            code: CodeIr::new(module),
+        }
     }
 }
 
@@ -43,19 +38,6 @@ impl Jit {
     /// Compile a string in the toy language into machine code.
     pub fn compile<'a>(&mut self, ast: &'a Ast<'a>) -> Result<*const u8, String> {
         let id = self.code.load(ast)?;
-
-        // Define the function to jit. This finishes compilation, although
-        // there may be outstanding relocations to perform. Currently, jit
-        // cannot finish relocations until all functions to be called are
-        // defined. For this toy demo for now, we'll just finalize the
-        // function below.
-        self.code
-            .module
-            .define_function(id, &mut self.code.ctx)
-            .map_err(|e| format!("Compilation error: {}", e))?;
-
-        // Now that compilation is finished, we can clear out the context state.
-        self.code.module.clear_context(&mut self.code.ctx);
 
         // Finalize the functions which we just defined, which resolves any
         // outstanding relocations (patching in addresses, now that they're

@@ -2,20 +2,22 @@ use super::*;
 use cranelift::prelude::*;
 use cranelift_module::{Linkage, Module};
 
-impl<M: Module> FunctionTranslator<'_, '_, M> {
+impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
+    const VAR_TYPE: types::Type = types::I64;
+
     pub fn literal(&mut self, literal: &str) -> ExprValue {
-        let imm: i32 = literal.parse().unwrap();
-        Some(self.builder.ins().iconst(self.int, i64::from(imm)))
+        let imm: i64 = literal.parse().unwrap();
+        Some(self.builder.ins().iconst(Self::VAR_TYPE, imm))
     }
     pub fn identifier(&mut self, name: &str) -> ExprValue {
         // `use_var` is used to read the value of a variable.
         let variable = self.variables.get(name).expect("variable not defined");
         Some(self.builder.use_var(*variable))
     }
-    pub fn assign(&mut self, name: &str, value: ExprValue) -> ExprValue {
+    pub fn assign(&mut self, name: &'a str, value: ExprValue) -> ExprValue {
         let value = value.expect("Expected a value");
-        let variable = self.variables.get(name).unwrap();
-        self.builder.def_var(*variable, value);
+        let variable = self.get_variable(name);
+        self.builder.def_var(variable, value);
         Some(value)
     }
     pub fn eq(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
@@ -93,7 +95,7 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         let else_block = self.builder.create_block();
         let merge_block = self.builder.create_block();
 
-        self.builder.append_block_param(merge_block, self.int);
+        self.builder.append_block_param(merge_block, Self::VAR_TYPE);
 
         // If
         self.builder
@@ -103,13 +105,15 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         // Then
         self.builder.switch_to_block(then_block);
         self.builder.seal_block(then_block);
-        let then_return = if_body(self).unwrap_or_else(|| self.builder.ins().iconst(self.int, 0));
+        let then_return =
+            if_body(self).unwrap_or_else(|| self.builder.ins().iconst(Self::VAR_TYPE, 0));
         self.builder.ins().jump(merge_block, &[then_return]);
 
         // Else
         self.builder.switch_to_block(else_block);
         self.builder.seal_block(else_block);
-        let else_return = else_body(self).unwrap_or_else(|| self.builder.ins().iconst(self.int, 0));
+        let else_return =
+            else_body(self).unwrap_or_else(|| self.builder.ins().iconst(Self::VAR_TYPE, 0));
         self.builder.ins().jump(merge_block, &[else_return]);
 
         // Finally
@@ -152,7 +156,7 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
         self.builder.seal_block(exit_block);
 
         // Just return 0 for now.
-        self.builder.ins().iconst(self.int, 0);
+        self.builder.ins().iconst(Self::VAR_TYPE, 0);
     }
     pub fn prepare_parameters(parameters: impl Iterator<Item = ExprValue>) -> Vec<Value> {
         parameters.map(|v| v.expect("Expected a value")).collect()
@@ -160,8 +164,8 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
     pub fn call(&mut self, name: &str, parameters: &[Value]) -> ExprValue {
         // Create Signature
         let mut sig = self.module.make_signature();
-        sig.params = vec![AbiParam::new(self.int); parameters.len()];
-        sig.returns.push(AbiParam::new(self.int));
+        sig.params = vec![AbiParam::new(Self::VAR_TYPE); parameters.len()];
+        sig.returns.push(AbiParam::new(Self::VAR_TYPE));
 
         // TODO: Streamline the API here?
         let callee = self
@@ -172,5 +176,65 @@ impl<M: Module> FunctionTranslator<'_, '_, M> {
 
         let call = self.builder.ins().call(local_callee, parameters);
         self.builder.inst_results(call).first().copied()
+    }
+
+    pub fn function_return(&mut self, return_value: ExprValue) {
+        let return_value = return_value.expect("Expected an value");
+        self.builder.ins().return_(&[return_value]);
+    }
+
+    pub fn function_declaration(
+        &mut self,
+        params: impl Iterator<Item = &'a str>,
+        the_return: &'a str,
+    ) {
+        // Create the entry block, to start emitting code in.
+        let entry_block = self.builder.create_block();
+
+        // Since this is the entry block, add block parameters corresponding to
+        // the function's parameters.
+        //
+        // TODO: Streamline the API here.
+        self.builder
+            .append_block_params_for_function_params(entry_block);
+
+        // Tell the builder to emit code in this block.
+        self.builder.switch_to_block(entry_block);
+
+        // And, tell the builder that this block will have no further
+        // predecessors. Since it's the entry block, it won't have any
+        // predecessors.
+        self.builder.seal_block(entry_block);
+
+        // Define the parameters
+        for (i, name) in params.enumerate() {
+            // TODO: cranelift_frontend should really have an API to make it easy to set
+            // up param variables.
+            let val = self.builder.block_params(entry_block)[i];
+            let var = self.get_variable(name);
+            self.builder.def_var(var, val);
+        }
+
+        // Define the return variable
+        let zero = self.builder.ins().iconst(Self::VAR_TYPE, 0);
+        let return_variable = self.get_variable(the_return);
+        self.builder.def_var(return_variable, zero);
+    }
+
+    pub fn seal(self) {
+        // TODO: Check if this code ends up reachable
+        self.builder.finalize();
+    }
+
+    ///////////////////////////////////////////////////////////////
+
+    fn get_variable(&mut self, name: &'a str) -> Variable {
+        self.variables.get(name).copied().unwrap_or_else(|| {
+            let var_index = self.variables.len();
+            let var = Variable::new(var_index);
+            self.variables.insert(name, var);
+            self.builder.declare_var(var, Self::VAR_TYPE);
+            var
+        })
     }
 }
