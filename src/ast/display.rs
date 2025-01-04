@@ -74,6 +74,10 @@ impl Ast<'_> {
                     self.print_ast(f, next, indent, false)?;
                 }
             }
+            Expr::Return(value) => {
+                write!(f, "{prefix}return ")?;
+                self.print_ast(f, value, indent + 1, false)?;
+            }
             Expr::Parameters(current, next) | Expr::Statements(current, next) => {
                 self.print_ast(f, current, indent, true)?;
                 self.print_ast(f, next, indent, true)?;

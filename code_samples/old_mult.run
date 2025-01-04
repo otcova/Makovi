@@ -1,6 +1,6 @@
 function multiply(a, b) -> result {
   if a < b {
-    result = multiply(b, a)
+    return multiply(b, a)
   } else {
     iterations = b
     while iterations > 1 {

@@ -16,9 +16,13 @@ peg::parser!(pub grammar parser(arena: &RefCell<&mut Ast<'input>>) for str {
 
     rule expression() -> ExprPtr =
         if_statement()
+        / return_expr()
         / while_loop()
         / assignment()
         / binary_op()
+
+    rule return_expr() -> ExprPtr = "return" _ expr:expression()
+        { arena.borrow_mut().push(Expr::Return(expr)) }
 
     rule if_statement() -> ExprPtr = if_else() / if_else_if()
 

@@ -3,7 +3,7 @@ function multiply("a", "b") -> "result"
 | | (lhs) Identifier("a")
 | | (rhs) Identifier("b")
 | then
-| | result = multiply(...)
+| | return multiply(...)
 | | | | Identifier("b")
 | | | | Identifier("a")
 | else

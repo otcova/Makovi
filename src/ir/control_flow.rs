@@ -3,7 +3,7 @@ use super::*;
 impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
     pub fn translate(&mut self, expr: ExprPtr) -> ExprValue {
         if expr == NULL_EXPR_PTR {
-            None
+            ExprValue::Null
         } else {
             self.translate_expr(self.ast.get(expr))
         }
@@ -42,7 +42,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             }
             Expr::WhileLoop { condition, body } => {
                 self.while_loop(|s| s.translate(condition), |s| s.translate(body));
-                None
+                ExprValue::Null
             }
             Expr::Call(name, parameters) => {
                 let parameters = self
@@ -51,6 +51,11 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                     .map(|p| self.translate_expr(p));
                 let parameters = Self::prepare_parameters(parameters);
                 self.call(name, &parameters)
+            }
+            Expr::Return(value) => {
+                let value = self.translate(value);
+                self.function_return(value);
+                ExprValue::Unreachable
             }
             Expr::Statements(expr, next) => {
                 if next == NULL_EXPR_PTR {

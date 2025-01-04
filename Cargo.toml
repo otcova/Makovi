@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-smallvec = "2.0.0-alpha.9"
 peg = "0.8.4"
 cranelift = "0.115.0"
 cranelift-module = "0.115.0"

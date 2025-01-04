@@ -13,7 +13,7 @@ pub struct CodeIr<M: Module> {
     pub builder_context: FunctionBuilderContext,
 }
 
-pub struct FunctionTranslator<'ast, 'build, M: Module> {
+struct FunctionTranslator<'ast, 'build, M: Module> {
     module: &'build mut M,
     builder: FunctionBuilder<'build>,
 
@@ -21,7 +21,30 @@ pub struct FunctionTranslator<'ast, 'build, M: Module> {
     ast: &'ast Ast<'ast>,
 }
 
-type ExprValue = Option<Value>;
+#[derive(Debug, PartialEq)]
+enum ExprValue {
+    Primitive(Value),
+    Null,
+    Unreachable,
+}
+
+impl ExprValue {
+    pub fn expect_primitive(self) -> Value {
+        match &self {
+            Self::Primitive(value) => *value,
+            _ => panic!("Expected Primitive Value, found: {:?}", &self),
+        }
+    }
+}
+
+impl From<Option<Value>> for ExprValue {
+    fn from(value: Option<Value>) -> Self {
+        match value {
+            Some(v) => Self::Primitive(v),
+            None => Self::Null,
+        }
+    }
+}
 
 impl<M: Module> CodeIr<M> {
     pub fn new(module: M) -> Self {
@@ -108,10 +131,10 @@ impl<M: Module> CodeIr<M> {
         };
 
         trans.function_declaration(params_names, return_name);
-        trans.translate(body);
-
-        let return_variable = trans.identifier(return_name);
-        trans.function_return(return_variable);
+        if ExprValue::Unreachable != trans.translate(body) {
+            let return_variable = trans.identifier(return_name);
+            trans.function_return(return_variable);
+        }
         trans.seal();
 
         ////////////////

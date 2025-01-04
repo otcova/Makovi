@@ -7,6 +7,7 @@ pub enum Expr<'a> {
     Literal(&'a str),
     Identifier(&'a str),
     IdentifierDefinition(&'a str),
+    Return(ExprPtr),
     Assign(&'a str, ExprPtr),
     Eq(ExprPtr, ExprPtr),
     Ne(ExprPtr, ExprPtr),

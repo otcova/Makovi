@@ -7,95 +7,93 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
 
     pub fn literal(&mut self, literal: &str) -> ExprValue {
         let imm: i64 = literal.parse().unwrap();
-        Some(self.builder.ins().iconst(Self::VAR_TYPE, imm))
+        ExprValue::Primitive(self.builder.ins().iconst(Self::VAR_TYPE, imm))
     }
     pub fn identifier(&mut self, name: &str) -> ExprValue {
         // `use_var` is used to read the value of a variable.
         let variable = self.variables.get(name).expect("variable not defined");
-        Some(self.builder.use_var(*variable))
+        ExprValue::Primitive(self.builder.use_var(*variable))
     }
     pub fn assign(&mut self, name: &'a str, value: ExprValue) -> ExprValue {
-        let value = value.expect("Expected a value");
+        let value = value.expect_primitive();
         let variable = self.get_variable(name);
         self.builder.def_var(variable, value);
-        Some(value)
+        ExprValue::Primitive(value)
     }
     pub fn eq(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().icmp(IntCC::Equal, lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().icmp(IntCC::Equal, lhs, rhs))
     }
     pub fn ne(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().icmp(IntCC::NotEqual, lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().icmp(IntCC::NotEqual, lhs, rhs))
     }
     pub fn lt(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().icmp(IntCC::SignedLessThan, lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().icmp(IntCC::SignedLessThan, lhs, rhs))
     }
     pub fn le(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(
             self.builder
                 .ins()
                 .icmp(IntCC::SignedLessThanOrEqual, lhs, rhs),
         )
     }
     pub fn gt(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().icmp(IntCC::SignedGreaterThan, lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().icmp(IntCC::SignedGreaterThan, lhs, rhs))
     }
     pub fn ge(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(
             self.builder
                 .ins()
                 .icmp(IntCC::SignedGreaterThanOrEqual, lhs, rhs),
         )
     }
     pub fn add(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().iadd(lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().iadd(lhs, rhs))
     }
     pub fn sub(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().isub(lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().isub(lhs, rhs))
     }
     pub fn mul(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().imul(lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().imul(lhs, rhs))
     }
     pub fn div(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().udiv(lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().udiv(lhs, rhs))
     }
     pub fn module(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect("Expected an value");
-        let rhs = rhs.expect("Expected an value");
-        Some(self.builder.ins().urem(lhs, rhs))
+        let lhs = lhs.expect_primitive();
+        let rhs = rhs.expect_primitive();
+        ExprValue::Primitive(self.builder.ins().urem(lhs, rhs))
     }
     pub fn if_else(
         &mut self,
         condition: ExprValue,
-        if_body: impl FnOnce(&mut Self) -> ExprValue,
+        then_body: impl FnOnce(&mut Self) -> ExprValue,
         else_body: impl FnOnce(&mut Self) -> ExprValue,
     ) -> ExprValue {
-        let condition = condition.expect("Expected a value");
+        let condition = condition.expect_primitive();
 
         let then_block = self.builder.create_block();
         let else_block = self.builder.create_block();
         let merge_block = self.builder.create_block();
-
-        self.builder.append_block_param(merge_block, Self::VAR_TYPE);
 
         // If
         self.builder
@@ -105,22 +103,22 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         // Then
         self.builder.switch_to_block(then_block);
         self.builder.seal_block(then_block);
-        let then_return =
-            if_body(self).unwrap_or_else(|| self.builder.ins().iconst(Self::VAR_TYPE, 0));
-        self.builder.ins().jump(merge_block, &[then_return]);
+        if ExprValue::Unreachable != then_body(self) {
+            self.builder.ins().jump(merge_block, &[]);
+        }
 
         // Else
         self.builder.switch_to_block(else_block);
         self.builder.seal_block(else_block);
-        let else_return =
-            else_body(self).unwrap_or_else(|| self.builder.ins().iconst(Self::VAR_TYPE, 0));
-        self.builder.ins().jump(merge_block, &[else_return]);
+        if ExprValue::Unreachable != else_body(self) {
+            self.builder.ins().jump(merge_block, &[]);
+        }
 
         // Finally
         self.builder.switch_to_block(merge_block);
         self.builder.seal_block(merge_block);
 
-        Some(self.builder.block_params(merge_block)[0])
+        ExprValue::Null
     }
 
     pub fn while_loop<C, B>(&mut self, condition: C, body: B)
@@ -135,7 +133,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.ins().jump(header_block, &[]);
         self.builder.switch_to_block(header_block);
 
-        let condition_result = condition(self).expect("Expected a value");
+        let condition_result = condition(self).expect_primitive();
 
         self.builder
             .ins()
@@ -144,9 +142,9 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.switch_to_block(body_block);
         self.builder.seal_block(body_block);
 
-        body(self);
-
-        self.builder.ins().jump(header_block, &[]);
+        if ExprValue::Unreachable != body(self) {
+            self.builder.ins().jump(header_block, &[]);
+        }
 
         self.builder.switch_to_block(exit_block);
 
@@ -159,7 +157,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.ins().iconst(Self::VAR_TYPE, 0);
     }
     pub fn prepare_parameters(parameters: impl Iterator<Item = ExprValue>) -> Vec<Value> {
-        parameters.map(|v| v.expect("Expected a value")).collect()
+        parameters.map(|v| v.expect_primitive()).collect()
     }
     pub fn call(&mut self, name: &str, parameters: &[Value]) -> ExprValue {
         // Create Signature
@@ -175,11 +173,11 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         let local_callee = self.module.declare_func_in_func(callee, self.builder.func);
 
         let call = self.builder.ins().call(local_callee, parameters);
-        self.builder.inst_results(call).first().copied()
+        self.builder.inst_results(call).first().copied().into()
     }
 
     pub fn function_return(&mut self, return_value: ExprValue) {
-        let return_value = return_value.expect("Expected an value");
+        let return_value = return_value.expect_primitive();
         self.builder.ins().return_(&[return_value]);
     }
 
