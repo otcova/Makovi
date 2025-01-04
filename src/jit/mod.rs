@@ -1,5 +1,5 @@
+use crate::ast::*;
 use crate::ir::*;
-use crate::parser::*;
 use cranelift::prelude::*;
 use cranelift_jit::{JITBuilder, JITModule};
 
@@ -13,6 +13,7 @@ impl Default for Jit {
         let mut flag_builder = settings::builder();
         flag_builder.set("use_colocated_libcalls", "false").unwrap();
         flag_builder.set("is_pic", "false").unwrap();
+        // TODO: flag_builder.set("opt_level", "speed_and_size").unwrap();
         let isa_builder = cranelift_native::builder().unwrap_or_else(|msg| {
             panic!("host machine is not supported: {}", msg);
         });
@@ -30,11 +31,6 @@ impl Default for Jit {
 }
 
 impl Jit {
-    pub fn gen_ir<'a>(&mut self, ast: &'a Ast<'a>) -> Result<String, String> {
-        self.code.load(ast)?;
-        Ok(self.code.write_ir())
-    }
-
     /// Compile a string in the toy language into machine code.
     pub fn compile<'a>(&mut self, ast: &'a Ast<'a>) -> Result<*const u8, String> {
         let id = self.code.load(ast)?;
@@ -54,6 +50,7 @@ impl Jit {
 #[cfg(test)]
 mod run {
     use super::*;
+    use crate::parser::*;
     use crate::utils::test_utils::*;
     use ::test::*;
     use std::fmt::Debug;
@@ -70,7 +67,7 @@ mod run {
         In: Clone,
         Out: Debug + PartialEq,
     {
-        let mut parser = ParserContext::default();
+        let mut parser = Parser::default();
         let ast = parser.parse(code).unwrap();
 
         let mut jit = Jit::default();
@@ -82,7 +79,10 @@ mod run {
 
         b.iter(|| jit_fn(black_box(input.clone())));
 
-        // Check for wierd inner state
-        assert_eq!(expected_output, jit_fn(black_box(input.clone())));
+        assert_eq!(
+            expected_output,
+            jit_fn(black_box(input.clone())),
+            "Did you forget to clear the cache?"
+        );
     }
 }

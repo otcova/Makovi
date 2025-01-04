@@ -1,8 +1,8 @@
 mod control_flow;
 mod translations;
 
-use crate::parser::*;
-use codegen::{write_function, Context};
+use crate::ast::*;
+use codegen::Context;
 use cranelift::prelude::*;
 use cranelift_module::{FuncId, Linkage, Module};
 use std::collections::HashMap;
@@ -32,16 +32,16 @@ impl<M: Module> CodeIr<M> {
         }
     }
 
-    pub fn write_ir(&self) -> String {
+    #[cfg(test)]
+    pub fn write_ir(&mut self, ast: &Ast) -> Result<String, String> {
+        self.translate_function(ast, ast.root().unwrap())?;
+
         let mut ir = String::new();
-        write_function(&mut ir, &self.context.func).unwrap();
-        ir
+        codegen::write_function(&mut ir, &self.context.func).unwrap();
+        Ok(ir)
     }
 
     pub fn load<'a>(&mut self, ast: &'a Ast<'a>) -> Result<FuncId, String> {
-        // We clear out the context state before using it.
-        self.module.clear_context(&mut self.context);
-
         let id = self.translate_function(ast, ast.root().unwrap())?;
 
         // Define the function to jit. This finishes compilation, although
@@ -71,6 +71,9 @@ impl<M: Module> CodeIr<M> {
         else {
             unreachable!("Expected a function");
         };
+
+        // We clear out the context state before using it.
+        self.module.clear_context(&mut self.context);
 
         for _ in ast.iter_list(parameters) {
             self.context
@@ -113,11 +116,54 @@ impl<M: Module> CodeIr<M> {
 
         ////////////////
 
+        // TODO:
+        // self.context
+        //     .optimize(self.module.isa(), &mut control::ControlPlane::default())
+        //     .unwrap();
+
+        ////////////////
+
         let id = self
             .module
             .declare_function(name, Linkage::Export, &self.context.func.signature)
             .map_err(|e| format!("Compilation error: {}", e))?;
 
         Ok(id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::*;
+    use crate::utils::test_utils::*;
+    use ::test::*;
+    use cranelift_jit::{JITBuilder, JITModule};
+
+    gen_tests!(generic_test(bench, code, test_name));
+
+    fn generic_test(_b: &mut Bencher, code: &str, test_name: &str) {
+        let mut parser = Parser::default();
+        let ast = parser.parse(code).unwrap();
+
+        let flags_builder = settings::builder();
+        // flags_builder.set("opt_level", "speed").unwrap();
+        let flags = settings::Flags::new(flags_builder);
+
+        let isa_builder = isa::lookup_by_name("x86_64").unwrap();
+        let isa = isa_builder.finish(flags).unwrap();
+
+        let builder = JITBuilder::with_isa(isa, cranelift_module::default_libcall_names());
+        let module = JITModule::new(builder);
+        let mut code = CodeIr::new(module);
+
+        ////////////////////////////
+
+        let ir = &code.write_ir(&ast).unwrap();
+
+        let expected = &load_src(test_name, ".ir");
+        assert_source_eq(expected, ir);
+
+        // TODO: b.iter(|| code.load(black_box(&ast)).unwrap());
     }
 }

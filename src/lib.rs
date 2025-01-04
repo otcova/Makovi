@@ -4,6 +4,7 @@
 #[cfg(test)]
 extern crate test;
 
+mod ast;
 mod ir;
 mod jit;
 mod parser;
@@ -13,7 +14,7 @@ use jit::*;
 use parser::*;
 
 pub struct MakoviJit<In, Out> {
-    parser: ParserContext,
+    parser: Parser,
     jit: Jit,
     fn_ptr: fn(In) -> Out,
 }
@@ -22,18 +23,13 @@ impl<In, Out> Default for MakoviJit<In, Out> {
     fn default() -> Self {
         MakoviJit {
             jit: Jit::default(),
-            parser: ParserContext::default(),
+            parser: Parser::default(),
             fn_ptr: |_| panic!("Function not loaded!"),
         }
     }
 }
 
 impl<In, Out> MakoviJit<In, Out> {
-    pub fn gen_ir(&mut self, code: &str) -> Result<String, String> {
-        let ast = self.parser.parse(code)?;
-        self.jit.gen_ir(&ast)
-    }
-
     pub fn load_code(&mut self, code: &str) -> Result<(), String> {
         let ast = self.parser.parse(code)?;
         let ptr = self.jit.compile(&ast)?;

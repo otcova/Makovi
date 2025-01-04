@@ -1,3 +1,5 @@
+use std::iter;
+
 macro_rules! gen_tests {
     ($generic_test:ident(bench, code, test_name)) => {
         gen_tests!(generic_test_wrapper(bench, code, test_name, input, output));
@@ -28,9 +30,36 @@ macro_rules! gen_tests {
     };
 }
 
+pub(crate) use gen_tests;
+
 pub fn load_src(name: &str, sufix: &str) -> String {
     let path = &format!("code_samples/{name}{sufix}.run");
     std::fs::read_to_string(path).unwrap_or_else(|_| panic!("Missing file: {}", path))
 }
 
-pub(crate) use gen_tests;
+pub fn assert_source_eq(expected: &str, actual: &str) {
+    if expected.trim() != actual.trim() {
+        println!("Expected:");
+        println!("{expected}");
+        println!();
+        println!("But was:");
+        println!("{}", diff_source(expected, actual));
+        panic!();
+    }
+}
+
+fn diff_source(expected: &str, parsed: &str) -> String {
+    let expected = expected.trim().lines();
+    let parsed = parsed.trim().lines();
+
+    let mut result = Vec::new();
+    for (l1, l2) in parsed.zip(expected.chain(iter::repeat(""))) {
+        if l1 == l2 {
+            result.push(l1.to_string());
+        } else {
+            result.push(format!("\x1b[0;31m{l1}\x1b[0m"));
+        }
+    }
+
+    result.join("\n")
+}
