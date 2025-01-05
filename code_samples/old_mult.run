@@ -1,4 +1,4 @@
-function multiply(a, b) -> result {
+function multiply(a, b) {
   if a < b {
     return multiply(b, a)
   } else {
@@ -7,6 +7,6 @@ function multiply(a, b) -> result {
       a = a + a
       iterations = iterations - 1
     }
-    result = a
+    return a
   }
 }

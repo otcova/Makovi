@@ -1,21 +1,21 @@
-function multiply("a", "b") -> "result"
-| if  lhs < rhs
-| | (lhs) Identifier("a")
-| | (rhs) Identifier("b")
-| then
-| | return multiply(...)
-| | | | Identifier("b")
-| | | | Identifier("a")
-| else
-| | iterations = Identifier("b")
-| | while  lhs > rhs
-| | | (lhs) Identifier("iterations")
-| | | (rhs) Literal("1")
-| | then
-| | | a =  lhs + rhs
-| | | | (lhs) Identifier("a")
-| | | | (rhs) Identifier("a")
-| | | iterations =  lhs - rhs
-| | | | (lhs) Identifier("iterations")
-| | | | (rhs) Literal("1")
-| | result = Identifier("a")
+function multiply("a", "b")
+│ if  lhs < rhs
+│ │ (lhs) Identifier("a")
+│ │ (rhs) Identifier("b")
+│ then
+│ │ return multiply(...)
+│ │ │ │ Identifier("b")
+│ │ │ │ Identifier("a")
+│ else
+│ │ iterations = Identifier("b")
+│ │ while  lhs > rhs
+│ │ │ (lhs) Identifier("iterations")
+│ │ │ (rhs) Literal("1")
+│ │ then
+│ │ │ a =  lhs + rhs
+│ │ │ │ (lhs) Identifier("a")
+│ │ │ │ (rhs) Identifier("a")
+│ │ │ iterations =  lhs - rhs
+│ │ │ │ (lhs) Identifier("iterations")
+│ │ │ │ (rhs) Literal("1")
+│ │ return Identifier("a")

@@ -5,9 +5,8 @@ peg::parser!(pub grammar parser(arena: &RefCell<&mut Ast<'input>>) for str {
     pub rule function() -> ExprPtr
         = [' ' | '\n']* "function" _ name:identifier_text() _
         "(" parameters:parameters_definition() ")" _
-        "->" _ return_expr:identifier_definition() _
         "{" _ "\n" body:statements() _ "}" _ "\n" _
-        { arena.borrow_mut().push(Expr::Function { name, parameters, return_expr, body }) }
+        { arena.borrow_mut().push(Expr::Function { name, parameters, body }) }
 
     rule statements() -> ExprPtr = statements_list() / null_expr()
     rule statements_list() -> ExprPtr = statement:statement() next_statement:statements()

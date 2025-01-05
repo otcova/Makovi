@@ -95,6 +95,9 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         let else_block = self.builder.create_block();
         let merge_block = self.builder.create_block();
 
+        let mut then_unreachable = false;
+        let mut else_unreachable = false;
+
         // If
         self.builder
             .ins()
@@ -103,14 +106,18 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         // Then
         self.builder.switch_to_block(then_block);
         self.builder.seal_block(then_block);
-        if ExprValue::Unreachable != then_body(self) {
+        if ExprValue::Unreachable == then_body(self) {
+            then_unreachable = true;
+        } else {
             self.builder.ins().jump(merge_block, &[]);
         }
 
         // Else
         self.builder.switch_to_block(else_block);
         self.builder.seal_block(else_block);
-        if ExprValue::Unreachable != else_body(self) {
+        if ExprValue::Unreachable == else_body(self) {
+            else_unreachable = true;
+        } else {
             self.builder.ins().jump(merge_block, &[]);
         }
 
@@ -118,7 +125,11 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.switch_to_block(merge_block);
         self.builder.seal_block(merge_block);
 
-        ExprValue::Null
+        if then_unreachable && else_unreachable {
+            ExprValue::Unreachable
+        } else {
+            ExprValue::Null
+        }
     }
 
     pub fn while_loop<C, B>(&mut self, condition: C, body: B)
@@ -181,11 +192,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.ins().return_(&[return_value]);
     }
 
-    pub fn function_declaration(
-        &mut self,
-        params: impl Iterator<Item = &'a str>,
-        the_return: &'a str,
-    ) {
+    pub fn function_declaration(&mut self, params: impl Iterator<Item = &'a str>) {
         // Create the entry block, to start emitting code in.
         let entry_block = self.builder.create_block();
 
@@ -212,15 +219,9 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             let var = self.get_variable(name);
             self.builder.def_var(var, val);
         }
-
-        // Define the return variable
-        let zero = self.builder.ins().iconst(Self::VAR_TYPE, 0);
-        let return_variable = self.get_variable(the_return);
-        self.builder.def_var(return_variable, zero);
     }
 
-    pub fn seal(self) {
-        // TODO: Check if this code ends up reachable
+    pub fn finish_translation(self) {
         self.builder.finalize();
     }
 

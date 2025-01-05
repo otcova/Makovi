@@ -88,7 +88,6 @@ impl<M: Module> CodeIr<M> {
         let Expr::Function {
             name,
             parameters,
-            return_expr,
             body,
         } = function
         else {
@@ -117,11 +116,6 @@ impl<M: Module> CodeIr<M> {
             _ => unreachable!(),
         });
 
-        let return_name = match ast.get(return_expr) {
-            Expr::IdentifierDefinition(name) => name,
-            _ => unreachable!(),
-        };
-
         let mut trans = FunctionTranslator {
             module: &mut self.module,
             builder,
@@ -130,12 +124,11 @@ impl<M: Module> CodeIr<M> {
             ast,
         };
 
-        trans.function_declaration(params_names, return_name);
+        trans.function_declaration(params_names);
         if ExprValue::Unreachable != trans.translate(body) {
-            let return_variable = trans.identifier(return_name);
-            trans.function_return(return_variable);
+            trans.function_return(ExprValue::Null);
         }
-        trans.seal();
+        trans.finish_translation();
 
         ////////////////
 

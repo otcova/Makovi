@@ -1,4 +1,4 @@
-function smallest_factor(number) -> factor {
+function smallest_factor(number) {
   if number mod 2 == 0 {
     return 2
   } else if number mod 3 == 0 {

@@ -19,7 +19,7 @@ impl Ast<'_> {
             return Ok(());
         }
 
-        let ind = &"| ".repeat(indent);
+        let ind = &"│ ".repeat(indent);
         let prefix = if start_with_prefix { ind } else { "" };
 
         let mut operator = |lhs: ExprPtr, symbol: &str, rhs: ExprPtr| -> std::fmt::Result {
@@ -34,14 +34,11 @@ impl Ast<'_> {
             Expr::Function {
                 name,
                 parameters,
-                return_expr: return_name,
                 body,
             } => {
                 write!(f, "{prefix}function {name}(")?;
                 self.print_ast(f, parameters, indent + 2, false)?;
-                write!(f, ") -> ")?;
-                self.print_ast(f, return_name, indent + 2, false)?;
-                writeln!(f)?;
+                writeln!(f, ")")?;
                 self.print_ast(f, body, indent + 1, true)?;
             }
             Expr::IfElse {

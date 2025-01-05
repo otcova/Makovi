@@ -33,7 +33,6 @@ pub enum Expr<'a> {
     Function {
         name: &'a str,
         parameters: ExprPtr,
-        return_expr: ExprPtr,
         body: ExprPtr,
     },
 
