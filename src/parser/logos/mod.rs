@@ -361,6 +361,20 @@ impl<'a> Ast<'a> {
                 lexer.next();
                 Some(self.push(Expr::Integer(value)))
             }
+            BracketOpen => {
+                lexer.next();
+                let expr = self.expr(lexer)?;
+                expect_token!(BracketClose, lexer.next());
+
+                if expr.is_none() {
+                    return Err(ParserError {
+                        message: "Expected an expression inside the '()'".to_owned(),
+                        span: LineColumnNumber { line: 0, column: 0 },
+                    });
+                }
+
+                expr
+            }
             _ => None,
         }))
     }
