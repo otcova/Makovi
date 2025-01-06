@@ -1,6 +1,9 @@
 mod display;
 
-use std::mem;
+use std::{
+    mem,
+    ops::{Index, IndexMut},
+};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Expr<'a> {
@@ -67,12 +70,12 @@ impl<'a> Iterator for AstList<'a> {
             return None;
         }
 
-        match self.ast.get(self.node) {
+        match self.ast[self.node] {
             Expr::Statements(expr, next)
             | Expr::Parameters(expr, next)
             | Expr::ParametersDefinition(expr, next) => {
                 self.node = next;
-                Some(self.ast.get(expr))
+                Some(self.ast[expr])
             }
             _ => None,
         }
@@ -122,10 +125,6 @@ impl<'c> Ast<'c> {
         (self.nodes.len() - 1) as ExprPtr
     }
 
-    pub fn get(&self, index: ExprPtr) -> Expr<'c> {
-        self.nodes[index as usize]
-    }
-
     pub fn root(&self) -> Option<Expr<'c>> {
         self.nodes.last().copied()
     }
@@ -137,5 +136,18 @@ impl<'c> Ast<'c> {
     #[allow(dead_code)]
     pub fn size(&self) -> usize {
         self.nodes.len()
+    }
+}
+
+impl<'c> Index<ExprPtr> for Ast<'c> {
+    type Output = Expr<'c>;
+    fn index(&self, index: ExprPtr) -> &Self::Output {
+        &self.nodes[index as usize]
+    }
+}
+
+impl IndexMut<ExprPtr> for Ast<'_> {
+    fn index_mut(&mut self, index: ExprPtr) -> &mut Self::Output {
+        &mut self.nodes[index as usize]
     }
 }

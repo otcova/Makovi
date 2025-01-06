@@ -30,7 +30,7 @@ impl Ast<'_> {
             self.print_ast(f, rhs, indent + 1, false)
         };
 
-        match self.get(expr) {
+        match self[expr] {
             Expr::Function {
                 name,
                 parameters,
@@ -50,7 +50,7 @@ impl Ast<'_> {
                 self.print_ast(f, condition, indent + 1, false)?;
                 writeln!(f, "{ind}then")?;
                 self.print_ast(f, then_body, indent + 1, true)?;
-                if let Expr::IfElse { .. } = self.get(else_body) {
+                if let Expr::IfElse { .. } = self[else_body] {
                     write!(f, "{ind}else ")?;
                     self.print_ast(f, else_body, indent, false)?;
                 } else {
@@ -94,7 +94,7 @@ impl Ast<'_> {
                 }
             }
             Expr::Literal(..) | Expr::Identifier(..) => {
-                writeln!(f, "{prefix}{:?}", self.get(expr))?;
+                writeln!(f, "{prefix}{:?}", self[expr])?;
             }
             Expr::Eq(lhs, rhs) => operator(lhs, "==", rhs)?,
             Expr::Ne(lhs, rhs) => operator(lhs, "!=", rhs)?,

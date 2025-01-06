@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+logos = "0.15.0"
 peg = "0.8.4"
 cranelift = "0.115.0"
 cranelift-module = "0.115.0"

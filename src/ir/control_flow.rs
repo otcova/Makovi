@@ -5,7 +5,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         if expr == NULL_EXPR_PTR {
             ExprValue::Null
         } else {
-            self.translate_expr(self.ast.get(expr))
+            self.translate_expr(self.ast[expr])
         }
     }
 
