@@ -303,8 +303,8 @@ impl<'a> Ast<'a> {
             return Ok(None);
         };
 
-        while let Some(Ok(token)) = lexer.peek() {
-            let Some(priority) = token.operator_priority() else {
+        while let Some(Ok(operator)) = lexer.peek() {
+            let Some(priority) = operator.operator_priority() else {
                 break; // The expression has ended
             };
 
@@ -312,9 +312,7 @@ impl<'a> Ast<'a> {
                 break; // The expression continues but with operators of lower priority
             }
 
-            let Some(Ok(operator)) = lexer.next() else {
-                unreachable!("Only an operator should have priority");
-            };
+            lexer.next();
 
             let next_expression =
                 self.expr_node(lexer, priority + 1)?

@@ -54,14 +54,14 @@ peg::parser!(pub grammar parser(arena: &RefCell<&mut Ast<'input>>) for str {
         a:@ _ ">"  _ b:(@) { arena.borrow_mut().push(Expr::Gt(a, b)) }
         a:@ _ ">=" _ b:(@) { arena.borrow_mut().push(Expr::Ge(a, b)) }
         --
+        a:@ _ "mod" _ "(" _ b:expression() _ ")" { arena.borrow_mut().push(Expr::Mod(a, b)) }
+        a:@ _ "mod" _ b:(@) { arena.borrow_mut().push(Expr::Mod(a, b)) }
+        --
         a:@ _ "+" _ b:(@) { arena.borrow_mut().push(Expr::Add(a, b)) }
         a:@ _ "-" _ b:(@) { arena.borrow_mut().push(Expr::Sub(a, b)) }
         --
         a:@ _ "*" _ b:(@) { arena.borrow_mut().push(Expr::Mul(a, b)) }
         a:@ _ "/" _ b:(@) { arena.borrow_mut().push(Expr::Div(a, b)) }
-        --
-        a:@ _ "mod" _ "(" _ b:expression() _ ")" { arena.borrow_mut().push(Expr::Mod(a, b)) }
-        a:@ _ "mod" _ b:(@) { arena.borrow_mut().push(Expr::Mod(a, b)) }
         --
         i:identifier_text() _ "(" args:parameters() ")" { arena.borrow_mut().push(Expr::Call(i, args)) }
         i:identifier() { i }
