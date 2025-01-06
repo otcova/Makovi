@@ -102,10 +102,13 @@ macro_rules! expect_token {
 impl Token<'_> {
     fn operator_priority(&self) -> Option<u8> {
         match self {
-            Mul => Some(2),
-            Div => Some(2),
-            Plus => Some(1),
-            Minus => Some(1),
+            Mul => Some(3),
+            Div => Some(3),
+            Plus => Some(2),
+            Minus => Some(2),
+            Mod => Some(1),
+            Eq => Some(0),
+            Ne => Some(0),
             Lt => Some(0),
             Le => Some(0),
             Gt => Some(0),
@@ -325,6 +328,9 @@ impl<'a> Ast<'a> {
                 Minus => Expr::Sub(value, next_expression),
                 Mul => Expr::Mul(value, next_expression),
                 Div => Expr::Div(value, next_expression),
+                Mod => Expr::Mod(value, next_expression),
+                Eq => Expr::Eq(value, next_expression),
+                Ne => Expr::Ne(value, next_expression),
                 Lt => Expr::Lt(value, next_expression),
                 Le => Expr::Le(value, next_expression),
                 Gt => Expr::Gt(value, next_expression),

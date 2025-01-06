@@ -58,12 +58,12 @@ impl Default for LexerLineContext {
 impl LexerLineContext {
     fn new_line(&mut self, new_line_char_span: Span) {
         self.line_number += 1;
-        self.line_char_index += new_line_char_span.end;
+        self.line_char_index = new_line_char_span.end;
     }
     fn line_column_number(&self, span: Span) -> LineColumnNumber {
         LineColumnNumber {
             line: self.line_number,
-            column: span.start - self.line_char_index,
+            column: span.start - self.line_char_index + 1,
         }
     }
 }
@@ -119,7 +119,8 @@ tokens! {
     Minus "-"
     Mul "*"
     Div "/"
+    Mod "mod"
 
     Identifier(slice) "[a-zA-Z_]+"
-    Integer(slice) "[1-9]+[0-9]*"
+    Integer(slice) "[0-9]+"
 }
