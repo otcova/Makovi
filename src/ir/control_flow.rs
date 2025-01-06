@@ -68,7 +68,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             Expr::Function { .. } => {
                 todo!()
             }
-            Expr::IdentifierDefinition(..)
+            Expr::VariableDefinition(..)
             | Expr::Parameters(..)
             | Expr::ParametersDefinition(..) => {
                 unreachable!()

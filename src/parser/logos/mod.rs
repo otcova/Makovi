@@ -102,10 +102,14 @@ macro_rules! expect_token {
 impl Token<'_> {
     fn operator_priority(&self) -> Option<u8> {
         match self {
-            Mul => Some(1),
-            Div => Some(1),
-            Plus => Some(0),
-            Minus => Some(0),
+            Mul => Some(2),
+            Div => Some(2),
+            Plus => Some(1),
+            Minus => Some(1),
+            Lt => Some(0),
+            Le => Some(0),
+            Gt => Some(0),
+            Ge => Some(0),
             _ => None,
         }
     }
@@ -119,11 +123,13 @@ impl<'a> Ast<'a> {
 
         self.function(&mut lexer)?;
 
-        if lexer.next().is_some() {
-            return Err(ParserError {
-                message: "Expected a single top level function".to_owned(),
-                span: LineColumnNumber { line: 0, column: 0 },
-            });
+        while let Some(token) = lexer.next() {
+            if token != Ok(NewLine) {
+                return Err(ParserError {
+                    message: format!("Expected a single top level function, found {token:?}"),
+                    span: LineColumnNumber { line: 0, column: 0 },
+                });
+            }
         }
 
         Ok(())
@@ -138,9 +144,7 @@ impl<'a> Ast<'a> {
         let parameters = self.function_parameters(lexer)?;
         expect_token!(BracketClose, lexer.next());
 
-        expect_token!(CurlyOpen, lexer.next());
         let body = self.statements_block(lexer)?;
-        expect_token!(CurlyClose, lexer.next());
 
         Ok(self.push(Expr::Function {
             name,
@@ -157,7 +161,7 @@ impl<'a> Ast<'a> {
     }
     fn function_parameter_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         expect_token!(Identifier(name), lexer.next());
-        let ident = self.push(Expr::Variable(name));
+        let ident = self.push(Expr::VariableDefinition(name));
 
         let next_param = match_token!(match lexer.peek() {
             Comma => {
@@ -171,7 +175,11 @@ impl<'a> Ast<'a> {
     }
 
     fn statements_block(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
-        self.statement_node(lexer)
+        expect_token!(CurlyOpen, lexer.next());
+        let statements = self.statement_node(lexer)?;
+        expect_token!(CurlyClose, lexer.next());
+
+        Ok(statements)
     }
 
     fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
@@ -179,16 +187,34 @@ impl<'a> Ast<'a> {
             Return => {
                 lexer.next();
                 let return_value = self.expr(lexer)?.ok_or_else(|| ParserError {
-                    message: "Expected an expression return".to_owned(),
+                    message: "Expected a return value".to_owned(),
                     span: LineColumnNumber { line: 0, column: 0 },
                 })?;
 
                 let return_statement = self.push(Expr::Return(return_value));
 
-                // TODO: Consume/Skip dead code faster and without pushing nodes
+                // TODO: Consume/Skip dead code without pushing nodes
                 self.statement_node(lexer)?;
 
-                return_statement
+                self.push(Expr::Statements(return_statement, NULL_EXPR_PTR))
+            }
+            If => {
+                let if_statement = self.if_statement(lexer)?;
+
+                let next_statement = self.statement_node(lexer)?;
+                self.push(Expr::Statements(if_statement, next_statement))
+            }
+            While => {
+                lexer.next();
+                let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
+                    message: "Expected the while condition".to_owned(),
+                    span: LineColumnNumber { line: 0, column: 0 },
+                })?;
+                let body = self.statements_block(lexer)?;
+                let while_statement = self.push(Expr::WhileLoop { condition, body });
+
+                let next_statement = self.statement_node(lexer)?;
+                self.push(Expr::Statements(while_statement, next_statement))
             }
             Identifier(name) => {
                 lexer.next();
@@ -223,9 +249,38 @@ impl<'a> Ast<'a> {
         }))
     }
 
+    fn if_statement(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+        expect_token!(If, lexer.next());
+
+        let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
+            message: "Expected the if condition".to_owned(),
+            span: LineColumnNumber { line: 0, column: 0 },
+        })?;
+        let then_body = self.statements_block(lexer)?;
+
+        expect_token!(Else, lexer.next());
+
+        let else_body = match_token!(match lexer.peek() {
+            If => self.if_statement(lexer),
+            CurlyOpen => self.statements_block(lexer),
+        })?;
+
+        Ok(self.push(Expr::IfElse {
+            condition,
+            then_body,
+            else_body,
+        }))
+    }
+
     fn expr_list(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         if let Some(expr) = self.expr(lexer)? {
-            let next_expr = self.expr_list(lexer)?;
+            let next_expr = match_token!(match lexer.peek() {
+                Comma => {
+                    lexer.next();
+                    self.expr_list(lexer)?
+                }
+                _ => NULL_EXPR_PTR,
+            });
             Ok(self.push(Expr::Parameters(expr, next_expr)))
         } else {
             Ok(NULL_EXPR_PTR)
@@ -241,17 +296,9 @@ impl<'a> Ast<'a> {
         lexer: &mut Lexer<'a>,
         min_priority: u8,
     ) -> Result<Option<ExprPtr>, ParserError> {
-        let mut value = match_token!(match lexer.peek() {
-            Identifier(var_name) => {
-                lexer.next();
-                self.push(Expr::Variable(var_name))
-            }
-            Integer(value) => {
-                lexer.next();
-                self.push(Expr::Integer(value))
-            }
-            _ => return Ok(None),
-        });
+        let Some(mut value) = self.expr_atom(lexer)? else {
+            return Ok(None);
+        };
 
         while let Some(Ok(token)) = lexer.peek() {
             let Some(priority) = token.operator_priority() else {
@@ -278,6 +325,10 @@ impl<'a> Ast<'a> {
                 Minus => Expr::Sub(value, next_expression),
                 Mul => Expr::Mul(value, next_expression),
                 Div => Expr::Div(value, next_expression),
+                Lt => Expr::Lt(value, next_expression),
+                Le => Expr::Le(value, next_expression),
+                Gt => Expr::Gt(value, next_expression),
+                Ge => Expr::Ge(value, next_expression),
                 _ => unreachable!("All operators should have been matched"),
             };
 
@@ -285,5 +336,28 @@ impl<'a> Ast<'a> {
         }
 
         Ok(Some(value))
+    }
+
+    fn expr_atom(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, ParserError> {
+        Ok(match_token!(match lexer.peek() {
+            Identifier(name) => {
+                lexer.next();
+                Some(match_token!(match lexer.peek() {
+                    BracketOpen => {
+                        lexer.next();
+                        let parameters = self.expr_list(lexer)?;
+                        expect_token!(BracketClose, lexer.next());
+
+                        self.push(Expr::Call(name, parameters))
+                    }
+                    _ => self.push(Expr::Variable(name)),
+                }))
+            }
+            Integer(value) => {
+                lexer.next();
+                Some(self.push(Expr::Integer(value)))
+            }
+            _ => None,
+        }))
     }
 }

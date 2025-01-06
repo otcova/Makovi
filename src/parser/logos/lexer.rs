@@ -110,6 +110,10 @@ tokens! {
     Assign "="
     Eq "=="
     Ne "!="
+    Lt "<"
+    Le "<="
+    Gt ">"
+    Ge ">="
 
     Plus "+"
     Minus "-"

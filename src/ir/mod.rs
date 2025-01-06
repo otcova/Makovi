@@ -112,7 +112,7 @@ impl<M: Module> CodeIr<M> {
         let builder = FunctionBuilder::new(&mut self.context.func, &mut self.builder_context);
 
         let params_names = ast.iter_list(parameters).map(|expr| match expr {
-            Expr::IdentifierDefinition(name) => name,
+            Expr::VariableDefinition(name) => name,
             _ => unreachable!(),
         });
 

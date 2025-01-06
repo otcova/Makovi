@@ -9,7 +9,7 @@ use std::{
 pub enum Expr<'a> {
     Integer(&'a str),
     Variable(&'a str),
-    IdentifierDefinition(&'a str),
+    VariableDefinition(&'a str),
     Return(ExprPtr),
     Assign(&'a str, ExprPtr),
     Eq(ExprPtr, ExprPtr),

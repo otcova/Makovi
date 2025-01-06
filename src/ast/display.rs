@@ -75,8 +75,12 @@ impl Ast<'_> {
                 write!(f, "{prefix}return ")?;
                 self.print_ast(f, value, indent + 1, false)?;
             }
-            Expr::Parameters(current, next) | Expr::Statements(current, next) => {
-                self.print_ast(f, current, indent, true)?;
+            Expr::Parameters(current, next) => {
+                self.print_ast(f, current, indent, start_with_prefix)?;
+                self.print_ast(f, next, indent, true)?;
+            }
+            Expr::Statements(current, next) => {
+                self.print_ast(f, current, indent, start_with_prefix)?;
                 self.print_ast(f, next, indent, true)?;
             }
             Expr::Assign(name, expr) => {
@@ -87,7 +91,7 @@ impl Ast<'_> {
                 writeln!(f, "{prefix}{fn_name}(...)")?;
                 self.print_ast(f, args, indent + 1, true)?;
             }
-            Expr::IdentifierDefinition(name) => {
+            Expr::VariableDefinition(name) => {
                 write!(f, r#"{prefix}"{name}""#)?;
                 if start_with_prefix {
                     writeln!(f)?;
