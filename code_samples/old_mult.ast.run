@@ -1,21 +1,21 @@
 function multiply("a", "b")
-│ if  lhs < rhs
+│ (Statement) if lhs < rhs
 │ │ (lhs) Variable("a")
 │ │ (rhs) Variable("b")
 │ then
-│ │ return multiply(...)
-│ │ │ │ Variable("b")
-│ │ │ │ Variable("a")
+│ │ (Statement) return multiply(...)
+│ │ │ │ (Parameter) Variable("b")
+│ │ │ │ (Parameter) Variable("a")
 │ else
-│ │ iterations = Variable("b")
-│ │ while  lhs > rhs
+│ │ (Statement) iterations = Variable("b")
+│ │ (Statement) while lhs > rhs
 │ │ │ (lhs) Variable("iterations")
 │ │ │ (rhs) Integer("1")
 │ │ then
-│ │ │ a =  lhs + rhs
+│ │ │ (Statement) a = lhs + rhs
 │ │ │ │ (lhs) Variable("a")
 │ │ │ │ (rhs) Variable("a")
-│ │ │ iterations =  lhs - rhs
+│ │ │ (Statement) iterations = lhs - rhs
 │ │ │ │ (lhs) Variable("iterations")
 │ │ │ │ (rhs) Integer("1")
-│ │ return Variable("a")
+│ │ (Statement) return Variable("a")

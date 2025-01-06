@@ -23,7 +23,7 @@ impl Ast<'_> {
         let prefix = if start_with_prefix { ind } else { "" };
 
         let mut operator = |lhs: ExprPtr, symbol: &str, rhs: ExprPtr| -> std::fmt::Result {
-            writeln!(f, "{prefix} lhs {symbol} rhs")?;
+            writeln!(f, "{prefix}lhs {symbol} rhs")?;
             write!(f, "{ind}(lhs) ")?;
             self.print_ast(f, lhs, indent + 1, false)?;
             write!(f, "{ind}(rhs) ")?;
@@ -76,11 +76,13 @@ impl Ast<'_> {
                 self.print_ast(f, value, indent + 1, false)?;
             }
             Expr::Parameters(current, next) => {
-                self.print_ast(f, current, indent, start_with_prefix)?;
+                write!(f, "{prefix}(Parameter) ")?;
+                self.print_ast(f, current, indent, false)?;
                 self.print_ast(f, next, indent, true)?;
             }
             Expr::Statements(current, next) => {
-                self.print_ast(f, current, indent, start_with_prefix)?;
+                write!(f, "{prefix}(Statement) ")?;
+                self.print_ast(f, current, indent, false)?;
                 self.print_ast(f, next, indent, true)?;
             }
             Expr::Assign(name, expr) => {

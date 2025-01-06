@@ -1,128 +1,128 @@
 function smallest_factor("number")
-│ if  lhs == rhs
-│ │ (lhs)  lhs mod rhs
+│ (Statement) if lhs == rhs
+│ │ (lhs) lhs mod rhs
 │ │ │ (lhs) Variable("number")
 │ │ │ (rhs) Integer("2")
 │ │ (rhs) Integer("0")
 │ then
-│ │ return Integer("2")
-│ else if  lhs == rhs
-│ │ (lhs)  lhs mod rhs
+│ │ (Statement) return Integer("2")
+│ else if lhs == rhs
+│ │ (lhs) lhs mod rhs
 │ │ │ (lhs) Variable("number")
 │ │ │ (rhs) Integer("3")
 │ │ (rhs) Integer("0")
 │ then
-│ │ return Integer("3")
-│ else if  lhs == rhs
-│ │ (lhs)  lhs mod rhs
+│ │ (Statement) return Integer("3")
+│ else if lhs == rhs
+│ │ (lhs) lhs mod rhs
 │ │ │ (lhs) Variable("number")
 │ │ │ (rhs) Integer("5")
 │ │ (rhs) Integer("0")
 │ then
-│ │ return Integer("5")
+│ │ (Statement) return Integer("5")
 │ else
-│ │ factor = Integer("7")
-│ │ while  lhs < rhs
+│ │ (Statement) factor = Integer("7")
+│ │ (Statement) while lhs < rhs
 │ │ │ (lhs) Variable("factor")
 │ │ │ (rhs) Variable("number")
 │ │ then
-│ │ │ if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ (Statement) if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
 │ │ │ │ │ (rhs) Variable("factor")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return Variable("factor")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ │ (Statement) return Variable("factor")
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("3")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("3")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("6")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("6")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("10")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("10")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("12")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("12")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("16")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("16")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("22")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("22")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("24")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("24")
-│ │ │ else if  lhs == rhs
-│ │ │ │ (lhs)  lhs mod rhs
+│ │ │ else if lhs == rhs
+│ │ │ │ (lhs) lhs mod rhs
 │ │ │ │ │ (lhs) Variable("number")
-│ │ │ │ │ (rhs)  lhs + rhs
+│ │ │ │ │ (rhs) lhs + rhs
 │ │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ │ (rhs) Integer("30")
 │ │ │ │ (rhs) Integer("0")
 │ │ │ then
-│ │ │ │ return  lhs + rhs
+│ │ │ │ (Statement) return lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("30")
 │ │ │ else
-│ │ │ │ factor =  lhs + rhs
+│ │ │ │ (Statement) factor = lhs + rhs
 │ │ │ │ │ (lhs) Variable("factor")
 │ │ │ │ │ (rhs) Integer("30")
-│ return Variable("number")
+│ (Statement) return Variable("number")
