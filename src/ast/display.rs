@@ -93,7 +93,7 @@ impl Ast<'_> {
                     writeln!(f)?;
                 }
             }
-            Expr::Literal(..) | Expr::Identifier(..) => {
+            Expr::Integer(..) | Expr::Variable(..) => {
                 writeln!(f, "{prefix}{:?}", self[expr])?;
             }
             Expr::Eq(lhs, rhs) => operator(lhs, "==", rhs)?,

@@ -157,7 +157,7 @@ impl<'a> Ast<'a> {
     }
     fn function_parameter_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         expect_token!(Identifier(name), lexer.next());
-        let ident = self.push(Expr::Identifier(name));
+        let ident = self.push(Expr::Variable(name));
 
         let next_param = match_token!(match lexer.peek() {
             Comma => {
@@ -244,11 +244,11 @@ impl<'a> Ast<'a> {
         let mut value = match_token!(match lexer.peek() {
             Identifier(var_name) => {
                 lexer.next();
-                self.push(Expr::Identifier(var_name))
+                self.push(Expr::Variable(var_name))
             }
             Integer(value) => {
                 lexer.next();
-                self.push(Expr::Literal(value))
+                self.push(Expr::Integer(value))
             }
             _ => return Ok(None),
         });

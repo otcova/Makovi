@@ -7,8 +7,8 @@ use std::{
 
 #[derive(Debug, Copy, Clone)]
 pub enum Expr<'a> {
-    Literal(&'a str),
-    Identifier(&'a str),
+    Integer(&'a str),
+    Variable(&'a str),
     IdentifierDefinition(&'a str),
     Return(ExprPtr),
     Assign(&'a str, ExprPtr),

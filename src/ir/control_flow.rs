@@ -11,8 +11,8 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
 
     fn translate_expr(&mut self, expr: Expr<'a>) -> ExprValue {
         match expr {
-            Expr::Literal(literal) => self.literal(literal),
-            Expr::Identifier(name) => self.identifier(name),
+            Expr::Integer(literal) => self.literal(literal),
+            Expr::Variable(name) => self.identifier(name),
             Expr::Assign(name, value) => {
                 let value = self.translate(value);
                 self.assign(name, value)

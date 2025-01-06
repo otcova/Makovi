@@ -83,14 +83,14 @@ peg::parser!(pub grammar parser(arena: &RefCell<&mut Ast<'input>>) for str {
     rule parameters_definition_1_list() -> ExprPtr = _ "," _ arg:identifier_definition() _ next:parameters_definition_1_loop()
         { arena.borrow_mut().push(Expr::ParametersDefinition(arg, next)) }
 
-    rule identifier() -> ExprPtr = i:identifier_text() { arena.borrow_mut().push(Expr::Identifier(i)) }
+    rule identifier() -> ExprPtr = i:identifier_text() { arena.borrow_mut().push(Expr::Variable(i)) }
     rule identifier_definition() -> ExprPtr = i:identifier_text() { arena.borrow_mut().push(Expr::IdentifierDefinition(i)) }
     rule identifier_text() -> &'input str
         = quiet!{ n:$(['a'..='z' | 'A'..='Z' | '_']['a'..='z' | 'A'..='Z' | '0'..='9' | '_']*) { n } }
         / expected!("identifier")
 
     rule literal() -> ExprPtr
-        = n:$(['0'..='9']+) { arena.borrow_mut().push(Expr::Literal(n)) }
+        = n:$(['0'..='9']+) { arena.borrow_mut().push(Expr::Integer(n)) }
 
     rule _() =  quiet!{[' ']*}
     rule null_expr() -> ExprPtr = _ { NULL_EXPR_PTR }
