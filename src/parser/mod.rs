@@ -20,7 +20,7 @@ impl Parser {
 
 pub struct ParserError {
     pub message: String,
-    pub span: LineColumnNumber,
+    pub span: LineSpan,
 }
 
 impl From<ParserError> for String {
@@ -33,8 +33,12 @@ impl Debug for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "[Parser error] {} (line: {}, column: {})",
-            self.message, self.span.line, self.span.column
+            "[Parser error] {} (from line {}, column {} to line {}, column {})",
+            self.message,
+            self.span.start.line,
+            self.span.start.column,
+            self.span.end.line,
+            self.span.end.column,
         )
     }
 }

@@ -11,25 +11,25 @@ macro_rules! match_next {
     ) => {
         match $lexer.$fn() {
             $($pat => $then,)*
-            #[allow(unreachable_patterns)]
-                Some(Ok(found)) => {
+                #[allow(unreachable_patterns)]
+                (Some(Ok(found)), span) => {
                     return Err(ParserError {
                         message: format!( "Unexpected token '{found:?}'"),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span,
                     })
                 }
-            #[allow(unreachable_patterns)]
-                Some(Err((token, span))) => {
+                #[allow(unreachable_patterns)]
+                (Some(Err(token)), span) => {
                     return Err(ParserError {
                         message: format!("Unknown token '{}'", token),
                         span,
                     })
                 }
-            #[allow(unreachable_patterns)]
-                None => {
+                #[allow(unreachable_patterns)]
+                (None, span) => {
                     return Err(ParserError {
                         message: "Unexpected end of file".to_owned(),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span,
                     })
                 }
         }
@@ -43,38 +43,41 @@ macro_rules! match_token {
         }
     ) => {
         match_next!(match $lexer.$fn() {
-            $(Some(Ok($token)) => $then,)*
+            $((Some(Ok($token)), _) => $then,)*
         })
     };
 }
 
 macro_rules! expect_token {
     ($pat:pat, $token:expr) => {
+        expect_token!($pat, _span, $token);
+    };
+    ($pat:pat, $span:ident, $token:expr) => {
         let token = $token;
-        let Some(Ok($pat)) = token else {
+        let (Some(Ok($pat)), $span) = token else {
             match token {
-                Some(Ok(found)) => {
+                (Some(Ok(found)), span) => {
                     return Err(ParserError {
                         message: format!(
                             "Expected token '{}' but found '{found:?}'",
                             stringify!($pat)
                         ),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span,
                     })
                 }
-                Some(Err((token, span))) => {
+                (Some(Err(token)), span) => {
                     return Err(ParserError {
                         message: format!("Unknown token {}", token),
                         span,
                     })
                 }
-                None => {
+                (None, span) => {
                     return Err(ParserError {
                         message: format!(
                             "Expected token '{}' but reached end of file",
                             stringify!($pat)
                         ),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span,
                     })
                 }
             }
@@ -109,11 +112,11 @@ impl<'a> Ast<'a> {
 
         self.function(&mut lexer)?;
 
-        while let Some(token) = lexer.next() {
+        while let (Some(token), span) = lexer.next() {
             if token != Ok(NewLine) {
                 return Err(ParserError {
                     message: format!("Expected a single top level function, found {token:?}"),
-                    span: LineColumnNumber { line: 0, column: 0 },
+                    span,
                 });
             }
         }
@@ -171,10 +174,10 @@ impl<'a> Ast<'a> {
     fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         Ok(match_token!(match lexer.peek() {
             Return => {
-                lexer.next();
+                let (_, return_span) = lexer.next();
                 let return_value = self.expr(lexer)?.ok_or_else(|| ParserError {
                     message: "Expected a return value".to_owned(),
-                    span: LineColumnNumber { line: 0, column: 0 },
+                    span: return_span.and(lexer.peek().1),
                 })?;
 
                 let return_statement = self.push(Expr::Return(return_value));
@@ -191,10 +194,10 @@ impl<'a> Ast<'a> {
                 self.push(Expr::Statements(if_statement, next_statement))
             }
             While => {
-                lexer.next();
+                let (_, while_span) = lexer.next();
                 let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
                     message: "Expected the while condition".to_owned(),
-                    span: LineColumnNumber { line: 0, column: 0 },
+                    span: while_span.and(lexer.peek().1),
                 })?;
                 let body = self.statements_block(lexer)?;
                 let while_statement = self.push(Expr::WhileLoop { condition, body });
@@ -203,12 +206,12 @@ impl<'a> Ast<'a> {
                 self.push(Expr::Statements(while_statement, next_statement))
             }
             Identifier(name) => {
-                lexer.next();
+                let (_, span) = lexer.next();
                 match_token!(match lexer.next() {
                     Assign => {
                         let value = self.expr(lexer)?.ok_or_else(|| ParserError {
                             message: format!("Expected an expression to assign to '{name}'"),
-                            span: LineColumnNumber { line: 0, column: 0 },
+                            span: span.and(lexer.peek().1),
                         })?;
 
                         let assign = self.push(Expr::Assign(name, value));
@@ -236,11 +239,11 @@ impl<'a> Ast<'a> {
     }
 
     fn if_statement(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
-        expect_token!(If, lexer.next());
+        expect_token!(If, span, lexer.next());
 
         let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
             message: "Expected the if condition".to_owned(),
-            span: LineColumnNumber { line: 0, column: 0 },
+            span: span.and(lexer.peek().1),
         })?;
         let then_body = self.statements_block(lexer)?;
 
@@ -286,7 +289,7 @@ impl<'a> Ast<'a> {
             return Ok(None);
         };
 
-        while let Some(Ok(operator)) = lexer.peek() {
+        while let (Some(Ok(operator)), span) = lexer.peek() {
             let Some(priority) = operator.operator_priority() else {
                 break; // The expression has ended
             };
@@ -301,7 +304,7 @@ impl<'a> Ast<'a> {
                 self.expr_node(lexer, priority + 1)?
                     .ok_or_else(|| ParserError {
                         message: format!("Expected an expression after the operator {operator:?}"),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span,
                     })?;
 
             let expr = match operator {
@@ -345,14 +348,14 @@ impl<'a> Ast<'a> {
                 Some(self.push(Expr::Integer(value)))
             }
             BracketOpen => {
-                lexer.next();
+                let (_, open_span) = lexer.next();
                 let expr = self.expr(lexer)?;
-                expect_token!(BracketClose, lexer.next());
+                expect_token!(BracketClose, close_span, lexer.next());
 
                 if expr.is_none() {
                     return Err(ParserError {
                         message: "Expected an expression inside the '()'".to_owned(),
-                        span: LineColumnNumber { line: 0, column: 0 },
+                        span: open_span.and(close_span),
                     });
                 }
 
