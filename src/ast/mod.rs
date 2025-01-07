@@ -25,14 +25,14 @@ pub enum Expr<'a> {
     Mod(ExprPtr, ExprPtr),
     IfElse {
         condition: ExprPtr,
-        then_body: ExprVecPtr,
-        else_body: ExprVecPtr,
+        then_body: ExprPtr,
+        else_body: ExprPtr,
     },
     WhileLoop {
         condition: ExprPtr,
-        body: ExprVecPtr,
+        body: ExprPtr,
     },
-    Call(&'a str, ExprVecPtr),
+    Call(&'a str, ExprPtr),
     Function {
         name: &'a str,
         parameters: ExprPtr,
@@ -55,7 +55,6 @@ pub struct Ast<'c> {
 }
 
 pub type ExprPtr = u32;
-pub type ExprVecPtr = u32;
 pub const NULL_EXPR_PTR: ExprPtr = ExprPtr::MAX;
 
 struct AstList<'a> {
