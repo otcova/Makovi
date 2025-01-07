@@ -1,24 +1,7 @@
-mod lexer;
-
+use super::*;
 use crate::ast::*;
-use lexer::*;
-use std::fmt::Debug;
+
 use Token::*;
-
-pub struct ParserError {
-    pub message: String,
-    pub span: LineColumnNumber,
-}
-
-impl Debug for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "[Parser error] {} (line: {}, column: {})",
-            self.message, self.span.line, self.span.column
-        )
-    }
-}
 
 macro_rules! match_next {
     (
