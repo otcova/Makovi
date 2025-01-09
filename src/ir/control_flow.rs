@@ -34,11 +34,15 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                 else_body,
             } => {
                 let condition = self.translate(condition);
-                self.if_else(
-                    condition,
-                    |s| s.translate(then_body),
-                    |s| s.translate(else_body),
-                )
+                if else_body == NULL_EXPR_PTR {
+                    self.if_statement(condition, |s| s.translate(then_body))
+                } else {
+                    self.if_else(
+                        condition,
+                        |s| s.translate(then_body),
+                        |s| s.translate(else_body),
+                    )
+                }
             }
             Expr::WhileLoop { condition, body } => {
                 self.while_loop(|s| s.translate(condition), |s| s.translate(body));

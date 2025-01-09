@@ -247,12 +247,16 @@ impl<'a> Ast<'a> {
         })?;
         let then_body = self.statements_block(lexer)?;
 
-        expect_token!(Else, lexer.next());
+        let mut else_body = NULL_EXPR_PTR;
 
-        let else_body = match_token!(match lexer.peek() {
-            If => self.if_statement(lexer),
-            CurlyOpen => self.statements_block(lexer),
-        })?;
+        if lexer.peek().0 == Some(Ok(Else)) {
+            lexer.next();
+
+            else_body = match_token!(match lexer.peek() {
+                If => self.if_statement(lexer),
+                CurlyOpen => self.statements_block(lexer),
+            })?;
+        }
 
         Ok(self.push(Expr::IfElse {
             condition,

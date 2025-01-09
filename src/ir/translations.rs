@@ -83,6 +83,33 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         let rhs = rhs.expect_primitive();
         ExprValue::Primitive(self.builder.ins().urem(lhs, rhs))
     }
+    pub fn if_statement(
+        &mut self,
+        condition: ExprValue,
+        then_body: impl FnOnce(&mut Self) -> ExprValue,
+    ) -> ExprValue {
+        let condition = condition.expect_primitive();
+
+        let then_block = self.builder.create_block();
+        let finally_block = self.builder.create_block();
+
+        // If
+        self.builder
+            .ins()
+            .brif(condition, then_block, &[], finally_block, &[]);
+
+        // Then
+        self.builder.switch_to_block(then_block);
+        self.builder.seal_block(then_block);
+        then_body(self);
+
+        // Finally
+        self.builder.switch_to_block(finally_block);
+        self.builder.seal_block(finally_block);
+
+        ExprValue::Null
+    }
+
     pub fn if_else(
         &mut self,
         condition: ExprValue,
@@ -93,7 +120,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
 
         let then_block = self.builder.create_block();
         let else_block = self.builder.create_block();
-        let merge_block = self.builder.create_block();
+        let finally_block = self.builder.create_block();
 
         let mut then_unreachable = false;
         let mut else_unreachable = false;
@@ -109,7 +136,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         if ExprValue::Unreachable == then_body(self) {
             then_unreachable = true;
         } else {
-            self.builder.ins().jump(merge_block, &[]);
+            self.builder.ins().jump(finally_block, &[]);
         }
 
         // Else
@@ -118,12 +145,12 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         if ExprValue::Unreachable == else_body(self) {
             else_unreachable = true;
         } else {
-            self.builder.ins().jump(merge_block, &[]);
+            self.builder.ins().jump(finally_block, &[]);
         }
 
         // Finally
-        self.builder.switch_to_block(merge_block);
-        self.builder.seal_block(merge_block);
+        self.builder.switch_to_block(finally_block);
+        self.builder.seal_block(finally_block);
 
         if then_unreachable && else_unreachable {
             ExprValue::Unreachable

@@ -11,20 +11,20 @@ block1:
     return v3
 
 block2:
-    jump block4(v1, v0)
+    jump block3(v1, v0)
 
-block4(v4: i64, v7: i64):
+block3(v4: i64, v7: i64):
     v5 = iconst.i64 1
     v6 = icmp sgt v4, v5  ; v5 = 1
-    brif v6, block5, block6
+    brif v6, block4, block5
 
-block5:
+block4:
     v8 = iadd.i64 v7, v7
     v9 = iconst.i64 1
     v10 = isub.i64 v4, v9  ; v9 = 1
-    jump block4(v10, v8)
+    jump block3(v10, v8)
 
-block6:
+block5:
     v11 = iconst.i64 0
     return v7
 }

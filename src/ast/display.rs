@@ -50,12 +50,14 @@ impl Ast<'_> {
                 self.print_ast(f, condition, indent + 1, false)?;
                 writeln!(f, "{ind}then")?;
                 self.print_ast(f, then_body, indent + 1, true)?;
-                if let Expr::IfElse { .. } = self[else_body] {
-                    write!(f, "{ind}else ")?;
-                    self.print_ast(f, else_body, indent, false)?;
-                } else {
-                    writeln!(f, "{ind}else")?;
-                    self.print_ast(f, else_body, indent + 1, true)?;
+                if else_body != NULL_EXPR_PTR {
+                    if let Expr::IfElse { .. } = self[else_body] {
+                        write!(f, "{ind}else ")?;
+                        self.print_ast(f, else_body, indent, false)?;
+                    } else {
+                        writeln!(f, "{ind}else")?;
+                        self.print_ast(f, else_body, indent + 1, true)?;
+                    }
                 }
             }
             Expr::WhileLoop { condition, body } => {

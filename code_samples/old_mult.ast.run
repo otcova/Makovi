@@ -6,16 +6,15 @@ function multiply("a", "b")
 │ │ (Statement) return multiply(...)
 │ │ │ │ (Parameter) Variable("b")
 │ │ │ │ (Parameter) Variable("a")
-│ else
-│ │ (Statement) iterations = Variable("b")
-│ │ (Statement) while lhs > rhs
+│ (Statement) iterations = Variable("b")
+│ (Statement) while lhs > rhs
+│ │ (lhs) Variable("iterations")
+│ │ (rhs) Integer("1")
+│ then
+│ │ (Statement) a = lhs + rhs
+│ │ │ (lhs) Variable("a")
+│ │ │ (rhs) Variable("a")
+│ │ (Statement) iterations = lhs - rhs
 │ │ │ (lhs) Variable("iterations")
 │ │ │ (rhs) Integer("1")
-│ │ then
-│ │ │ (Statement) a = lhs + rhs
-│ │ │ │ (lhs) Variable("a")
-│ │ │ │ (rhs) Variable("a")
-│ │ │ (Statement) iterations = lhs - rhs
-│ │ │ │ (lhs) Variable("iterations")
-│ │ │ │ (rhs) Integer("1")
-│ │ (Statement) return Variable("a")
+│ (Statement) return Variable("a")

@@ -34,168 +34,165 @@ block7:
     return v15  ; v15 = 5
 
 block8:
-    v16 = iconst.i64 7
-    jump block10(v16)  ; v16 = 7
-
-block10(v17: i64):
-    v19 = icmp slt v17, v18
-    brif v19, block11, block12
-
-block11:
-    v20 = urem.i64 v18, v17
-    v21 = iconst.i64 0
-    v22 = icmp eq v20, v21  ; v21 = 0
-    brif v22, block13, block14
-
-block13:
-    return v17
-
-block14:
-    v23 = iconst.i64 3
-    v24 = iadd.i64 v17, v23  ; v23 = 3
-    v25 = urem.i64 v18, v24
-    v26 = iconst.i64 0
-    v27 = icmp eq v25, v26  ; v26 = 0
-    brif v27, block16, block17
-
-block16:
-    v28 = iconst.i64 3
-    v29 = iadd.i64 v17, v28  ; v28 = 3
-    return v29
-
-block17:
-    v30 = iconst.i64 6
-    v31 = iadd.i64 v17, v30  ; v30 = 6
-    v32 = urem.i64 v18, v31
-    v33 = iconst.i64 0
-    v34 = icmp eq v32, v33  ; v33 = 0
-    brif v34, block19, block20
-
-block19:
-    v35 = iconst.i64 6
-    v36 = iadd.i64 v17, v35  ; v35 = 6
-    return v36
-
-block20:
-    v37 = iconst.i64 10
-    v38 = iadd.i64 v17, v37  ; v37 = 10
-    v39 = urem.i64 v18, v38
-    v40 = iconst.i64 0
-    v41 = icmp eq v39, v40  ; v40 = 0
-    brif v41, block22, block23
-
-block22:
-    v42 = iconst.i64 10
-    v43 = iadd.i64 v17, v42  ; v42 = 10
-    return v43
-
-block23:
-    v44 = iconst.i64 12
-    v45 = iadd.i64 v17, v44  ; v44 = 12
-    v46 = urem.i64 v18, v45
-    v47 = iconst.i64 0
-    v48 = icmp eq v46, v47  ; v47 = 0
-    brif v48, block25, block26
-
-block25:
-    v49 = iconst.i64 12
-    v50 = iadd.i64 v17, v49  ; v49 = 12
-    return v50
-
-block26:
-    v51 = iconst.i64 16
-    v52 = iadd.i64 v17, v51  ; v51 = 16
-    v53 = urem.i64 v18, v52
-    v54 = iconst.i64 0
-    v55 = icmp eq v53, v54  ; v54 = 0
-    brif v55, block28, block29
-
-block28:
-    v56 = iconst.i64 16
-    v57 = iadd.i64 v17, v56  ; v56 = 16
-    return v57
-
-block29:
-    v58 = iconst.i64 22
-    v59 = iadd.i64 v17, v58  ; v58 = 22
-    v60 = urem.i64 v18, v59
-    v61 = iconst.i64 0
-    v62 = icmp eq v60, v61  ; v61 = 0
-    brif v62, block31, block32
-
-block31:
-    v63 = iconst.i64 22
-    v64 = iadd.i64 v17, v63  ; v63 = 22
-    return v64
-
-block32:
-    v65 = iconst.i64 24
-    v66 = iadd.i64 v17, v65  ; v65 = 24
-    v67 = urem.i64 v18, v66
-    v68 = iconst.i64 0
-    v69 = icmp eq v67, v68  ; v68 = 0
-    brif v69, block34, block35
-
-block34:
-    v70 = iconst.i64 24
-    v71 = iadd.i64 v17, v70  ; v70 = 24
-    return v71
-
-block35:
-    v72 = iconst.i64 30
-    v73 = iadd.i64 v17, v72  ; v72 = 30
-    v74 = urem.i64 v18, v73
-    v75 = iconst.i64 0
-    v76 = icmp eq v74, v75  ; v75 = 0
-    brif v76, block37, block38
-
-block37:
-    v77 = iconst.i64 30
-    v78 = iadd.i64 v17, v77  ; v77 = 30
-    return v78
-
-block38:
-    v79 = iconst.i64 30
-    v80 = iadd.i64 v17, v79  ; v79 = 30
-    jump block39
-
-block39:
-    jump block36
-
-block36:
-    jump block33
-
-block33:
-    jump block30
-
-block30:
-    jump block27
-
-block27:
-    jump block24
-
-block24:
-    jump block21
-
-block21:
-    jump block18
-
-block18:
-    jump block15
-
-block15:
-    jump block10(v80)
-
-block12:
-    v81 = iconst.i64 0
-    jump block9
-
-block9:
     jump block6
 
 block6:
     jump block3
 
 block3:
+    v16 = iconst.i64 7
+    jump block9(v16)  ; v16 = 7
+
+block9(v17: i64):
+    v19 = icmp slt v17, v18
+    brif v19, block10, block11
+
+block10:
+    v20 = urem.i64 v18, v17
+    v21 = iconst.i64 0
+    v22 = icmp eq v20, v21  ; v21 = 0
+    brif v22, block12, block13
+
+block12:
+    return v17
+
+block13:
+    v23 = iconst.i64 3
+    v24 = iadd.i64 v17, v23  ; v23 = 3
+    v25 = urem.i64 v18, v24
+    v26 = iconst.i64 0
+    v27 = icmp eq v25, v26  ; v26 = 0
+    brif v27, block15, block16
+
+block15:
+    v28 = iconst.i64 3
+    v29 = iadd.i64 v17, v28  ; v28 = 3
+    return v29
+
+block16:
+    v30 = iconst.i64 6
+    v31 = iadd.i64 v17, v30  ; v30 = 6
+    v32 = urem.i64 v18, v31
+    v33 = iconst.i64 0
+    v34 = icmp eq v32, v33  ; v33 = 0
+    brif v34, block18, block19
+
+block18:
+    v35 = iconst.i64 6
+    v36 = iadd.i64 v17, v35  ; v35 = 6
+    return v36
+
+block19:
+    v37 = iconst.i64 10
+    v38 = iadd.i64 v17, v37  ; v37 = 10
+    v39 = urem.i64 v18, v38
+    v40 = iconst.i64 0
+    v41 = icmp eq v39, v40  ; v40 = 0
+    brif v41, block21, block22
+
+block21:
+    v42 = iconst.i64 10
+    v43 = iadd.i64 v17, v42  ; v42 = 10
+    return v43
+
+block22:
+    v44 = iconst.i64 12
+    v45 = iadd.i64 v17, v44  ; v44 = 12
+    v46 = urem.i64 v18, v45
+    v47 = iconst.i64 0
+    v48 = icmp eq v46, v47  ; v47 = 0
+    brif v48, block24, block25
+
+block24:
+    v49 = iconst.i64 12
+    v50 = iadd.i64 v17, v49  ; v49 = 12
+    return v50
+
+block25:
+    v51 = iconst.i64 16
+    v52 = iadd.i64 v17, v51  ; v51 = 16
+    v53 = urem.i64 v18, v52
+    v54 = iconst.i64 0
+    v55 = icmp eq v53, v54  ; v54 = 0
+    brif v55, block27, block28
+
+block27:
+    v56 = iconst.i64 16
+    v57 = iadd.i64 v17, v56  ; v56 = 16
+    return v57
+
+block28:
+    v58 = iconst.i64 22
+    v59 = iadd.i64 v17, v58  ; v58 = 22
+    v60 = urem.i64 v18, v59
+    v61 = iconst.i64 0
+    v62 = icmp eq v60, v61  ; v61 = 0
+    brif v62, block30, block31
+
+block30:
+    v63 = iconst.i64 22
+    v64 = iadd.i64 v17, v63  ; v63 = 22
+    return v64
+
+block31:
+    v65 = iconst.i64 24
+    v66 = iadd.i64 v17, v65  ; v65 = 24
+    v67 = urem.i64 v18, v66
+    v68 = iconst.i64 0
+    v69 = icmp eq v67, v68  ; v68 = 0
+    brif v69, block33, block34
+
+block33:
+    v70 = iconst.i64 24
+    v71 = iadd.i64 v17, v70  ; v70 = 24
+    return v71
+
+block34:
+    v72 = iconst.i64 30
+    v73 = iadd.i64 v17, v72  ; v72 = 30
+    v74 = urem.i64 v18, v73
+    v75 = iconst.i64 0
+    v76 = icmp eq v74, v75  ; v75 = 0
+    brif v76, block36, block37
+
+block36:
+    v77 = iconst.i64 30
+    v78 = iadd.i64 v17, v77  ; v77 = 30
+    return v78
+
+block37:
+    v79 = iconst.i64 30
+    v80 = iadd.i64 v17, v79  ; v79 = 30
+    jump block38
+
+block38:
+    jump block35
+
+block35:
+    jump block32
+
+block32:
+    jump block29
+
+block29:
+    jump block26
+
+block26:
+    jump block23
+
+block23:
+    jump block20
+
+block20:
+    jump block17
+
+block17:
+    jump block14
+
+block14:
+    jump block9(v80)
+
+block11:
+    v81 = iconst.i64 0
     return v18
 }
