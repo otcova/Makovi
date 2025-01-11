@@ -7,6 +7,8 @@ extern crate test;
 mod ast;
 mod ir;
 mod jit;
+mod lazy_parser;
+mod lexer;
 mod parser;
 mod utils;
 

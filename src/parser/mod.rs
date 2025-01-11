@@ -1,8 +1,7 @@
-mod lexer;
 mod parse;
 
 use crate::ast::*;
-use lexer::*;
+use crate::utils::line_span::LineSpan;
 use std::fmt::Debug;
 
 #[derive(Default)]

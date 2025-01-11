@@ -1,4 +1,8 @@
+mod tokens;
+
+use crate::utils::line_span::*;
 use logos::{Logos, Span};
+pub use tokens::Token;
 
 pub struct Lexer<'a> {
     lexer: logos::Lexer<'a, Token<'a>>,
@@ -42,24 +46,6 @@ impl<'a> Lexer<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct LineColumnNumber {
-    pub line: usize,
-    pub column: usize,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct LineSpan {
-    pub start: LineColumnNumber,
-    pub end: LineColumnNumber,
-}
-
-impl Default for LineColumnNumber {
-    fn default() -> Self {
-        Self { line: 1, column: 1 }
-    }
-}
-
 #[derive(Clone, Copy)]
 pub struct LexerLineContext {
     line_number: usize,
@@ -71,15 +57,6 @@ impl Default for LexerLineContext {
         Self {
             line_number: 1,
             line_char_index: 0,
-        }
-    }
-}
-
-impl LineSpan {
-    pub fn and(self, other: LineSpan) -> LineSpan {
-        LineSpan {
-            start: self.start.min(other.start),
-            end: other.end.max(other.end),
         }
     }
 }
@@ -101,61 +78,4 @@ impl LexerLineContext {
             },
         }
     }
-}
-
-macro_rules! tokens {
-    ($($name:ident$((slice) $regex:literal)? $($token:literal)?)*) => {
-        #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
-        #[logos(skip r"[ \t\f]+")]
-        #[logos(extras = LexerLineContext)]
-        pub enum Token<'s> {
-            $(
-                $(
-                #[regex($regex, |lexer| lexer.slice())]
-                $name(&'s str),
-                )?
-
-                $(
-                #[token($token)]
-                $name,
-                )?
-            )*
-        }
-    };
-}
-
-tokens! {
-    Function "function"
-    Return "return"
-
-    Comma ","
-
-    CurlyOpen "{"
-    CurlyClose "}"
-
-    BracketOpen "("
-    BracketClose ")"
-
-    If "if"
-    Else "else"
-    While "while"
-
-    Assign "="
-    Eq "=="
-    Ne "!="
-    Lt "<"
-    Le "<="
-    Gt ">"
-    Ge ">="
-
-    Plus "+"
-    Minus "-"
-    Mul "*"
-    Div "/"
-    Mod "mod"
-
-    Identifier(slice) "[a-zA-Z_]+"
-    Integer(slice) "[0-9]+"
-
-    NewLine "\n"
 }
