@@ -1,24 +1,39 @@
 use super::*;
+use crate::ast::Operator;
 use logos::Logos;
 
 macro_rules! tokens {
     ($($name:ident$((slice) $regex:literal)? $($token:literal)?)*) => {
-        #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
-        #[logos(skip r"[ \t\f]+")]
-        #[logos(extras = LexerLineContext)]
-        pub enum Token<'s> {
-            $(
-                $(
-                #[regex($regex, |lexer| lexer.slice())]
-                $name(&'s str),
-                )?
+    #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
+    #[logos(skip r"[ \t\f]+")]
+    #[logos(extras = LexerLineContext)]
+    pub enum Token<'s> {
 
-                $(
-                #[token($token)]
-                $name,
-                )?
-            )*
-        }
+        #[token("+", |_| Operator::Add)]
+        #[token("-", |_| Operator::Sub)]
+        #[token("*", |_| Operator::Mul)]
+        #[token("/", |_| Operator::Div)]
+        #[token("mod", |_| Operator::Mod)]
+        #[token("==", |_| Operator::Eq)]
+        #[token("!=", |_| Operator::Ne)]
+        #[token("<", |_| Operator::Lt)]
+        #[token("<=", |_| Operator::Le)]
+        #[token(">", |_| Operator::Gt)]
+        #[token(">=", |_| Operator::Ge)]
+        Operator(Operator),
+
+        $(
+            $(
+            #[regex($regex, |lexer| lexer.slice())]
+            $name(&'s str),
+            )?
+
+            $(
+            #[token($token)]
+            $name,
+            )?
+        )*
+    }
     };
 }
 
@@ -39,18 +54,6 @@ tokens! {
     While "while"
 
     Assign "="
-    Eq "=="
-    Ne "!="
-    Lt "<"
-    Le "<="
-    Gt ">"
-    Ge ">="
-
-    Plus "+"
-    Minus "-"
-    Mul "*"
-    Div "/"
-    Mod "mod"
 
     Identifier(slice) "[a-zA-Z_]+"
     Integer(slice) "[0-9]+"

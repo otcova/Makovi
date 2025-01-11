@@ -1,8 +1,10 @@
+mod token_match_macros;
 mod tokens;
 
-use crate::utils::line_span::*;
+use crate::error::*;
 use logos::{Logos, Span};
-pub use tokens::Token;
+pub(crate) use token_match_macros::*;
+pub use tokens::*;
 
 pub struct Lexer<'a> {
     lexer: logos::Lexer<'a, Token<'a>>,
