@@ -12,21 +12,21 @@ macro_rules! match_next {
         match $lexer.$fn() {
             $($pat => $then,)*
                 #[allow(unreachable_patterns)]
-                (Some(Ok(found)), span) => {
+                TokenResult { token: Some(Ok(found)), span, .. } => {
                     return Err(ParserError {
                         message: format!( "Unexpected token '{found:?}'"),
                         span,
                     })
                 }
                 #[allow(unreachable_patterns)]
-                (Some(Err(token)), span) => {
+                TokenResult { token: Some(Err(())), span, slice } => {
                     return Err(ParserError {
-                        message: format!("Unknown token '{}'", token),
+                        message: format!("Unknown token '{}'", slice),
                         span,
                     })
                 }
                 #[allow(unreachable_patterns)]
-                (None, span) => {
+                TokenResult { token: None, span, .. } => {
                     return Err(ParserError {
                         message: "Unexpected end of file".to_owned(),
                         span,
@@ -39,24 +39,43 @@ macro_rules! match_next {
 macro_rules! match_token {
     (
         match $lexer:ident.$fn:ident() {
-            $($token:pat => $then:expr$(,)?)*
+            $(
+                $token:ident
+                $(($slice:ident))?
+                => $then:expr$(,)?
+            )*
         }
     ) => {
         match_next!(match $lexer.$fn() {
-            $((Some(Ok($token)), _) => $then,)*
+            $(TokenResult { token: Some(Ok($token)), $(slice: $slice,)? .. }=> $then,)*
         })
     };
 }
 
 macro_rules! expect_token {
-    ($pat:pat, $token:expr) => {
-        expect_token!($pat, _span, $token);
+    ($pat:ident, $span:ident, $token:expr) => {
+        expect_token!($pat(_slice), $span, $token);
     };
-    ($pat:pat, $span:ident, $token:expr) => {
+    ($pat:ident, $token:expr) => {
+        expect_token!($pat(_slice), _span, $token);
+    };
+    ($pat:ident($slice:ident), $token:expr) => {
+        expect_token!($pat($slice), _span, $token);
+    };
+    ($pat:ident($slice:ident), $span:ident, $token:expr) => {
         let token = $token;
-        let (Some(Ok($pat)), $span) = token else {
+        let TokenResult {
+            token: Some(Ok($pat)),
+            span: $span,
+            slice: $slice,
+        } = token
+        else {
             match token {
-                (Some(Ok(found)), span) => {
+                TokenResult {
+                    token: Some(Ok(found)),
+                    span,
+                    ..
+                } => {
                     return Err(ParserError {
                         message: format!(
                             "Expected token '{}' but found '{found:?}'",
@@ -65,13 +84,19 @@ macro_rules! expect_token {
                         span,
                     })
                 }
-                (Some(Err(token)), span) => {
+                TokenResult {
+                    token: Some(Err(())),
+                    span,
+                    slice,
+                } => {
                     return Err(ParserError {
-                        message: format!("Unknown token {}", token),
+                        message: format!("Unknown token {}", slice),
                         span,
                     })
                 }
-                (None, span) => {
+                TokenResult {
+                    token: None, span, ..
+                } => {
                     return Err(ParserError {
                         message: format!(
                             "Expected token '{}' but reached end of file",
@@ -85,7 +110,7 @@ macro_rules! expect_token {
     };
 }
 
-impl Token<'_> {
+impl Token {
     fn operator_priority(&self) -> Option<u8> {
         match self {
             Mul => Some(3),
@@ -112,7 +137,12 @@ impl<'a> Ast<'a> {
 
         self.function(&mut lexer)?;
 
-        while let (Some(token), span) = lexer.next() {
+        while let TokenResult {
+            token: Some(token),
+            span,
+            ..
+        } = lexer.next()
+        {
             if token != Ok(NewLine) {
                 return Err(ParserError {
                     message: format!("Expected a single top level function, found {token:?}"),
@@ -144,7 +174,7 @@ impl<'a> Ast<'a> {
 
     fn function_parameters(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         Ok(match_token!(match lexer.peek() {
-            Identifier(..) => self.function_parameter_node(lexer)?,
+            Identifier => self.function_parameter_node(lexer)?,
             BracketClose => NULL_EXPR_PTR,
         }))
     }
@@ -174,10 +204,12 @@ impl<'a> Ast<'a> {
     fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
         Ok(match_token!(match lexer.peek() {
             Return => {
-                let (_, return_span) = lexer.next();
+                let TokenResult {
+                    span: return_span, ..
+                } = lexer.next();
                 let return_value = self.expr(lexer)?.ok_or_else(|| ParserError {
                     message: "Expected a return value".to_owned(),
-                    span: return_span.and(lexer.peek().1),
+                    span: return_span.and(lexer.peek().span),
                 })?;
 
                 let return_statement = self.push(Expr::Return(return_value));
@@ -194,10 +226,12 @@ impl<'a> Ast<'a> {
                 self.push(Expr::Statements(if_statement, next_statement))
             }
             While => {
-                let (_, while_span) = lexer.next();
+                let TokenResult {
+                    span: while_span, ..
+                } = lexer.next();
                 let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
                     message: "Expected the while condition".to_owned(),
-                    span: while_span.and(lexer.peek().1),
+                    span: while_span.and(lexer.peek().span),
                 })?;
                 let body = self.statements_block(lexer)?;
                 let while_statement = self.push(Expr::WhileLoop { condition, body });
@@ -206,12 +240,12 @@ impl<'a> Ast<'a> {
                 self.push(Expr::Statements(while_statement, next_statement))
             }
             Identifier(name) => {
-                let (_, span) = lexer.next();
+                let TokenResult { span, .. } = lexer.next();
                 match_token!(match lexer.next() {
                     Assign => {
                         let value = self.expr(lexer)?.ok_or_else(|| ParserError {
                             message: format!("Expected an expression to assign to '{name}'"),
-                            span: span.and(lexer.peek().1),
+                            span: span.and(lexer.peek().span),
                         })?;
 
                         let assign = self.push(Expr::Assign(name, value));
@@ -243,13 +277,13 @@ impl<'a> Ast<'a> {
 
         let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
             message: "Expected the if condition".to_owned(),
-            span: span.and(lexer.peek().1),
+            span: span.and(lexer.peek().span),
         })?;
         let then_body = self.statements_block(lexer)?;
 
         let mut else_body = NULL_EXPR_PTR;
 
-        if lexer.peek().0 == Some(Ok(Else)) {
+        if lexer.peek().token == Some(Ok(Else)) {
             lexer.next();
 
             else_body = match_token!(match lexer.peek() {
@@ -272,7 +306,7 @@ impl<'a> Ast<'a> {
                     lexer.next();
                     self.expr_list(lexer)?
                 }
-                _ => NULL_EXPR_PTR,
+                _any => NULL_EXPR_PTR,
             });
             Ok(self.push(Expr::Parameters(expr, next_expr)))
         } else {
@@ -293,7 +327,12 @@ impl<'a> Ast<'a> {
             return Ok(None);
         };
 
-        while let (Some(Ok(operator)), span) = lexer.peek() {
+        while let TokenResult {
+            token: Some(Ok(operator)),
+            span,
+            ..
+        } = lexer.peek()
+        {
             let Some(priority) = operator.operator_priority() else {
                 break; // The expression has ended
             };
@@ -344,7 +383,7 @@ impl<'a> Ast<'a> {
 
                         self.push(Expr::Call(name, parameters))
                     }
-                    _ => self.push(Expr::Variable(name)),
+                    _any => self.push(Expr::Variable(name)),
                 }))
             }
             Integer(value) => {
@@ -352,7 +391,9 @@ impl<'a> Ast<'a> {
                 Some(self.push(Expr::Integer(value)))
             }
             BracketOpen => {
-                let (_, open_span) = lexer.next();
+                let TokenResult {
+                    span: open_span, ..
+                } = lexer.next();
                 let expr = self.expr(lexer)?;
                 expect_token!(BracketClose, close_span, lexer.next());
 
@@ -365,7 +406,7 @@ impl<'a> Ast<'a> {
 
                 expr
             }
-            _ => None,
+            _any => None,
         }))
     }
 }

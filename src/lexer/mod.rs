@@ -5,16 +5,25 @@ use logos::{Logos, Span};
 pub use tokens::Token;
 
 pub struct Lexer<'a> {
-    lexer: logos::Lexer<'a, Token<'a>>,
+    lexer: logos::Lexer<'a, Token>,
     token: TokenResult<'a>,
 }
 
-pub type TokenResult<'a> = (Option<Result<Token<'a>, &'a str>>, LineSpan);
+#[derive(Clone, Copy)]
+pub struct TokenResult<'a> {
+    pub token: Option<Result<Token, ()>>,
+    pub slice: &'a str,
+    pub span: LineSpan,
+}
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a str) -> Self {
         let mut lexer = Self {
-            token: (None, LineSpan::default()),
+            token: TokenResult {
+                token: None,
+                slice: "",
+                span: LineSpan::default(),
+            },
             lexer: Token::lexer(source),
         };
         lexer.next();
@@ -23,22 +32,21 @@ impl<'a> Lexer<'a> {
 
     pub fn next(&mut self) -> TokenResult<'a> {
         let token = self.lexer.next();
-        let span = self.lexer.extras.span(self.lexer.span());
+        let line_span = self.lexer.extras.span(self.lexer.span());
+        let slice = self.lexer.slice();
 
-        let next_token = match token {
-            // Advance line
-            Some(Ok(Token::NewLine)) => {
-                self.lexer.extras.new_line(self.lexer.span());
-                Some(Ok(Token::NewLine))
-            }
+        if token == Some(Ok(Token::NewLine)) {
+            self.lexer.extras.new_line(self.lexer.span());
+        }
 
-            // Give the unrecognized token as the error type
-            Some(Err(())) => Some(Err(self.lexer.slice())),
-
-            Some(Ok(token)) => Some(Ok(token)),
-            None => None,
-        };
-        std::mem::replace(&mut self.token, (next_token, span))
+        std::mem::replace(
+            &mut self.token,
+            TokenResult {
+                token,
+                slice,
+                span: line_span,
+            },
+        )
     }
 
     pub fn peek(&self) -> TokenResult<'a> {

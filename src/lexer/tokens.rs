@@ -2,21 +2,15 @@ use super::*;
 use logos::Logos;
 
 macro_rules! tokens {
-    ($($name:ident$((slice) $regex:literal)? $($token:literal)?)*) => {
+    ($($name:ident $(/$regex:literal/)? $($token:literal)?)*) => {
         #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
         #[logos(skip r"[ \t\f]+")]
         #[logos(extras = LexerLineContext)]
-        pub enum Token<'s> {
+        pub enum Token {
             $(
-                $(
-                #[regex($regex, |lexer| lexer.slice())]
-                $name(&'s str),
-                )?
-
-                $(
-                #[token($token)]
+                $(#[regex($regex)])?
+                $(#[token($token)])?
                 $name,
-                )?
             )*
         }
     };
@@ -52,8 +46,8 @@ tokens! {
     Div "/"
     Mod "mod"
 
-    Identifier(slice) "[a-zA-Z_]+"
-    Integer(slice) "[0-9]+"
+    Identifier /"[a-zA-Z_]+"/
+    Integer /"[0-9]+"/
 
     NewLine "\n"
 }
