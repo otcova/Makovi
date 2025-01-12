@@ -1,3 +1,4 @@
+use super::Parser;
 use crate::ast::Operator;
 use crate::error::CompilationError;
 use crate::lexer::*;
@@ -13,14 +14,9 @@ type ExprPtr = u32;
 pub struct ExprOffset<const OFFSET: u32>;
 pub struct ExprList(u32);
 
-#[derive(Default)]
-pub struct ExprContext<'a> {
-    buffer: Vec<Expr<'a>>,
-}
-
-impl<'a> ExprContext<'a> {
-    pub fn parse(&mut self, lexer: &mut Lexer<'a>) -> Result<(), CompilationError> {
-        self.buffer.clear();
+impl<'a> Parser<'a> {
+    pub fn parse_expression(&mut self, lexer: &mut Lexer<'a>) -> Result<(), CompilationError> {
+        self.expressions.clear();
         self.expr(lexer, 0)
     }
 
@@ -39,7 +35,7 @@ impl<'a> ExprContext<'a> {
             // Parse right hand side expression
             self.expr(lexer, priority + 1)?;
 
-            self.buffer
+            self.expressions
                 .push(Expr::Operator(operator, ExprOffset, ExprOffset));
         }
         Ok(())
@@ -91,15 +87,15 @@ impl<'a> ExprContext<'a> {
                         lexer.next();
                         let parameters = self.expr_list_next(lexer, Token::BracketClose)?;
 
-                        self.buffer.push(Expr::Call(name, parameters));
+                        self.expressions.push(Expr::Call(name, parameters));
                     }
                     _ => {
-                        self.buffer.push(Expr::Variable(name));
+                        self.expressions.push(Expr::Variable(name));
                     }
                 });
             }
             Integer(value) => {
-                self.buffer.push(Expr::Integer(value));
+                self.expressions.push(Expr::Integer(value));
             }
             BracketOpen => {
                 self.expr(lexer, 0)?;
