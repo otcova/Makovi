@@ -3,127 +3,20 @@ use crate::error::CompilationError;
 use crate::lexer::Token::*;
 use crate::lexer::*;
 
-macro_rules! match_next {
-    (
-        match $lexer:ident.$fn:ident() {
-            $($pat:pat => $then:expr$(,)?)*
-        }
-    ) => {
-        match $lexer.$fn() {
-            $($pat => $then,)*
-                #[allow(unreachable_patterns)]
-                TokenResult { token: Some(Ok(found)), span, .. } => {
-                    return Err(CompilationError {
-                        message: format!( "Unexpected token '{found:?}'"),
-                        span,
-                    })
-                }
-                #[allow(unreachable_patterns)]
-                TokenResult { token: Some(Err(())), span, slice } => {
-                    return Err(CompilationError {
-                        message: format!("Unknown token '{}'", slice),
-                        span,
-                    })
-                }
-                #[allow(unreachable_patterns)]
-                TokenResult { token: None, span, .. } => {
-                    return Err(CompilationError {
-                        message: "Unexpected end of file".to_owned(),
-                        span,
-                    })
-                }
-        }
-    };
-}
-
-macro_rules! match_token {
-    (
-        match $lexer:ident.$fn:ident() {
-            $(
-                $token:ident
-                $(($slice:ident))?
-                => $then:expr$(,)?
-            )*
-        }
-    ) => {
-        match_next!(match $lexer.$fn() {
-            $(TokenResult { token: Some(Ok($token)), $(slice: $slice,)? .. }=> $then,)*
-        })
-    };
-}
-
-macro_rules! expect_token {
-    ($pat:ident, $span:ident, $token:expr) => {
-        expect_token!($pat(_slice), $span, $token);
-    };
-    ($pat:ident, $token:expr) => {
-        expect_token!($pat(_slice), _span, $token);
-    };
-    ($pat:ident($slice:ident), $token:expr) => {
-        expect_token!($pat($slice), _span, $token);
-    };
-    ($pat:ident($slice:ident), $span:ident, $token:expr) => {
-        let token = $token;
-        let TokenResult {
-            token: Some(Ok($pat)),
-            span: $span,
-            slice: $slice,
-        } = token
-        else {
-            match token {
-                TokenResult {
-                    token: Some(Ok(found)),
-                    span,
-                    ..
-                } => {
-                    return Err(CompilationError {
-                        message: format!(
-                            "Expected token '{}' but found '{found:?}'",
-                            stringify!($pat)
-                        ),
-                        span,
-                    })
-                }
-                TokenResult {
-                    token: Some(Err(())),
-                    span,
-                    slice,
-                } => {
-                    return Err(CompilationError {
-                        message: format!("Unknown token {}", slice),
-                        span,
-                    })
-                }
-                TokenResult {
-                    token: None, span, ..
-                } => {
-                    return Err(CompilationError {
-                        message: format!(
-                            "Expected token '{}' but reached end of file",
-                            stringify!($pat)
-                        ),
-                        span,
-                    })
-                }
-            }
-        };
-    };
-}
-
 impl Token {
-    fn operator_priority(&self) -> Option<(u8, Operator)> {
+    fn get_operator(&self) -> Option<Operator> {
         match self {
-            Mul => Some((3, Operator::Mul)),
-            Div => Some((3, Operator::Div)),
-            Plus => Some((2, Operator::Add)),
-            Minus => Some((2, Operator::Sub)),
-            Mod => Some((1, Operator::Mod)),
-            Eq => Some((0, Operator::Eq)),
-            Ne => Some((0, Operator::Ne)),
-            Lt => Some((0, Operator::Lt)),
-            Le => Some((0, Operator::Le)),
-            Gt => Some((0, Operator::Gt)),
-            Ge => Some((0, Operator::Ge)),
+            Mul => Some(Operator::Mul),
+            Div => Some(Operator::Div),
+            Plus => Some(Operator::Add),
+            Minus => Some(Operator::Sub),
+            Mod => Some(Operator::Mod),
+            Eq => Some(Operator::Eq),
+            Ne => Some(Operator::Ne),
+            Lt => Some(Operator::Lt),
+            Le => Some(Operator::Le),
+            Gt => Some(Operator::Gt),
+            Ge => Some(Operator::Ge),
             _ => None,
         }
     }
@@ -155,13 +48,13 @@ impl<'a> Ast<'a> {
     }
 
     fn function<'l>(&mut self, lexer: &'l mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
-        expect_token!(Function, lexer.next());
+        lexer.next().expect(Token::Function)?;
 
-        expect_token!(Identifier(name), lexer.next());
+        let name = lexer.next().expect(Token::Identifier)?.slice;
 
-        expect_token!(BracketOpen, lexer.next());
+        lexer.next().expect(Token::BracketOpen)?;
         let parameters = self.function_parameters(lexer)?;
-        expect_token!(BracketClose, lexer.next());
+        lexer.next().expect(Token::BracketClose)?;
 
         let body = self.statements_block(lexer)?;
 
@@ -182,7 +75,7 @@ impl<'a> Ast<'a> {
         &mut self,
         lexer: &mut Lexer<'a>,
     ) -> Result<ExprPtr, CompilationError> {
-        expect_token!(Identifier(name), lexer.next());
+        let name = lexer.next().expect(Token::Identifier)?.slice;
         let ident = self.push(Expr::VariableDefinition(name));
 
         let next_param = match_token!(match lexer.peek() {
@@ -197,9 +90,9 @@ impl<'a> Ast<'a> {
     }
 
     fn statements_block(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
-        expect_token!(CurlyOpen, lexer.next());
+        lexer.next().expect(Token::CurlyOpen)?;
         let statements = self.statement_node(lexer)?;
-        expect_token!(CurlyClose, lexer.next());
+        lexer.next().expect(Token::CurlyClose)?;
 
         Ok(statements)
     }
@@ -258,7 +151,7 @@ impl<'a> Ast<'a> {
                     }
                     BracketOpen => {
                         let parameters = self.expr_list(lexer)?;
-                        expect_token!(BracketClose, lexer.next());
+                        lexer.next().expect(Token::BracketClose)?;
 
                         let call = self.push(Expr::Call(name, parameters));
 
@@ -276,7 +169,7 @@ impl<'a> Ast<'a> {
     }
 
     fn if_statement(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
-        expect_token!(If, span, lexer.next());
+        let span = lexer.next().expect(Token::If)?.span;
 
         let condition = self.expr(lexer)?.ok_or_else(|| CompilationError {
             message: "Expected the if condition".to_owned(),
@@ -336,9 +229,10 @@ impl<'a> Ast<'a> {
             ..
         } = lexer.peek()
         {
-            let Some((priority, operator)) = token.operator_priority() else {
+            let Some(operator) = token.get_operator() else {
                 break; // The expression has ended
             };
+            let priority = operator.priority();
 
             if priority < min_priority {
                 break; // The expression continues but with operators of lower priority
@@ -367,7 +261,7 @@ impl<'a> Ast<'a> {
                     BracketOpen => {
                         lexer.next();
                         let parameters = self.expr_list(lexer)?;
-                        expect_token!(BracketClose, lexer.next());
+                        lexer.next().expect(Token::BracketClose)?;
 
                         self.push(Expr::Call(name, parameters))
                     }
@@ -383,7 +277,7 @@ impl<'a> Ast<'a> {
                     span: open_span, ..
                 } = lexer.next();
                 let expr = self.expr(lexer)?;
-                expect_token!(BracketClose, close_span, lexer.next());
+                let close_span = lexer.next().expect(Token::BracketClose)?.span;
 
                 if expr.is_none() {
                     return Err(CompilationError {

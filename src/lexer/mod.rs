@@ -1,7 +1,9 @@
+mod token_match_macros;
 mod tokens;
 
 use crate::error::*;
 use logos::{Logos, Span};
+pub(crate) use token_match_macros::*;
 pub use tokens::*;
 
 pub struct Lexer<'a> {
@@ -14,6 +16,33 @@ pub struct TokenResult<'a> {
     pub token: Option<Result<Token, ()>>,
     pub slice: &'a str,
     pub span: LineSpan,
+}
+
+impl TokenResult<'_> {
+    pub fn expect_token(self) -> Result<Token, CompilationError> {
+        match self.token {
+            Some(Ok(token)) => Ok(token),
+            Some(Err(())) => Err(CompilationError {
+                message: format!("Unknown token {}", self.slice),
+                span: self.span,
+            }),
+            None => Err(CompilationError {
+                message: "Expected a token but reached end of file".to_owned(),
+                span: self.span,
+            }),
+        }
+    }
+
+    pub fn expect(self, token: Token) -> Result<Self, CompilationError> {
+        if token == self.expect_token()? {
+            Ok(self)
+        } else {
+            Err(CompilationError {
+                message: format!("Expected token '{token:?}' but found '{}'", self.slice),
+                span: self.span,
+            })
+        }
+    }
 }
 
 impl<'a> Lexer<'a> {
