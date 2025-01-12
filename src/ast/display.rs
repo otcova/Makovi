@@ -22,14 +22,6 @@ impl Ast<'_> {
         let ind = &"│ ".repeat(indent);
         let prefix = if start_with_prefix { ind } else { "" };
 
-        let mut operator = |lhs: ExprPtr, symbol: &str, rhs: ExprPtr| -> std::fmt::Result {
-            writeln!(f, "{prefix}lhs {symbol} rhs")?;
-            write!(f, "{ind}(lhs) ")?;
-            self.print_ast(f, lhs, indent + 1, false)?;
-            write!(f, "{ind}(rhs) ")?;
-            self.print_ast(f, rhs, indent + 1, false)
-        };
-
         match self[expr] {
             Expr::Function {
                 name,
@@ -104,17 +96,13 @@ impl Ast<'_> {
             Expr::Integer(..) | Expr::Variable(..) => {
                 writeln!(f, "{prefix}{:?}", self[expr])?;
             }
-            Expr::Eq(lhs, rhs) => operator(lhs, "==", rhs)?,
-            Expr::Ne(lhs, rhs) => operator(lhs, "!=", rhs)?,
-            Expr::Lt(lhs, rhs) => operator(lhs, "<", rhs)?,
-            Expr::Le(lhs, rhs) => operator(lhs, "<=", rhs)?,
-            Expr::Gt(lhs, rhs) => operator(lhs, ">", rhs)?,
-            Expr::Ge(lhs, rhs) => operator(lhs, ">=", rhs)?,
-            Expr::Add(lhs, rhs) => operator(lhs, "+", rhs)?,
-            Expr::Sub(lhs, rhs) => operator(lhs, "-", rhs)?,
-            Expr::Mul(lhs, rhs) => operator(lhs, "*", rhs)?,
-            Expr::Div(lhs, rhs) => operator(lhs, "/", rhs)?,
-            Expr::Mod(lhs, rhs) => operator(lhs, "mod", rhs)?,
+            Expr::Operator(operator, lhs, rhs) => {
+                writeln!(f, "{prefix}lhs {operator} rhs")?;
+                write!(f, "{ind}(lhs) ")?;
+                self.print_ast(f, lhs, indent + 1, false)?;
+                write!(f, "{ind}(rhs) ")?;
+                self.print_ast(f, rhs, indent + 1, false)?;
+            }
         };
 
         Ok(())

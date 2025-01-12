@@ -1,8 +1,7 @@
 mod parse;
 
 use crate::ast::*;
-use crate::utils::line_span::LineSpan;
-use std::fmt::Debug;
+use crate::error::*;
 
 #[derive(Default)]
 pub struct Parser {
@@ -10,35 +9,10 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn parse<'c>(&'c mut self, code: &'c str) -> Result<Ast<'c>, ParserError> {
+    pub fn parse<'c>(&'c mut self, code: &'c str) -> Result<Ast<'c>, CompilationError> {
         let mut ast = self.ast_context.create_ast();
         ast.parse(code)?;
         Ok(ast)
-    }
-}
-
-pub struct ParserError {
-    pub message: String,
-    pub span: LineSpan,
-}
-
-impl From<ParserError> for String {
-    fn from(error: ParserError) -> Self {
-        format!("{:?}", error)
-    }
-}
-
-impl Debug for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "[Parser error] {} (from line {}, column {} to line {}, column {})",
-            self.message,
-            self.span.start.line,
-            self.span.start.column,
-            self.span.end.line,
-            self.span.end.column,
-        )
     }
 }
 

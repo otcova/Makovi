@@ -17,17 +17,23 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                 let value = self.translate(value);
                 self.assign(name, value)
             }
-            Expr::Eq(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.eq(l, r)),
-            Expr::Ne(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.ne(l, r)),
-            Expr::Lt(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.lt(l, r)),
-            Expr::Le(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.le(l, r)),
-            Expr::Gt(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.gt(l, r)),
-            Expr::Ge(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.ge(l, r)),
-            Expr::Add(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.add(l, r)),
-            Expr::Sub(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.sub(l, r)),
-            Expr::Mul(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.mul(l, r)),
-            Expr::Div(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.div(l, r)),
-            Expr::Mod(lhs, rhs) => self.operator(lhs, rhs, |s, l, r| s.module(l, r)),
+            Expr::Operator(operator, lhs, rhs) => {
+                let lhs = self.translate(lhs);
+                let rhs = self.translate(rhs);
+                match operator {
+                    Operator::Eq => self.eq(lhs, rhs),
+                    Operator::Ne => self.ne(lhs, rhs),
+                    Operator::Lt => self.lt(lhs, rhs),
+                    Operator::Le => self.le(lhs, rhs),
+                    Operator::Gt => self.gt(lhs, rhs),
+                    Operator::Ge => self.ge(lhs, rhs),
+                    Operator::Add => self.add(lhs, rhs),
+                    Operator::Sub => self.sub(lhs, rhs),
+                    Operator::Mul => self.mul(lhs, rhs),
+                    Operator::Div => self.div(lhs, rhs),
+                    Operator::Mod => self.module(lhs, rhs),
+                }
+            }
             Expr::IfElse {
                 condition,
                 then_body,
@@ -78,14 +84,5 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                 unreachable!()
             }
         }
-    }
-
-    fn operator<F>(&mut self, a: ExprPtr, b: ExprPtr, translation: F) -> ExprValue
-    where
-        F: FnOnce(&mut Self, ExprValue, ExprValue) -> ExprValue,
-    {
-        let a = self.translate(a);
-        let b = self.translate(b);
-        translation(self, a, b)
     }
 }

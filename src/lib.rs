@@ -5,6 +5,7 @@
 extern crate test;
 
 mod ast;
+mod error;
 mod ir;
 mod jit;
 mod lazy_parser;

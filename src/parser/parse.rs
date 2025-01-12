@@ -1,7 +1,7 @@
-use super::*;
 use crate::ast::*;
+use crate::error::CompilationError;
+use crate::lexer::Token::*;
 use crate::lexer::*;
-use Token::*;
 
 macro_rules! match_next {
     (
@@ -13,21 +13,21 @@ macro_rules! match_next {
             $($pat => $then,)*
                 #[allow(unreachable_patterns)]
                 TokenResult { token: Some(Ok(found)), span, .. } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: format!( "Unexpected token '{found:?}'"),
                         span,
                     })
                 }
                 #[allow(unreachable_patterns)]
                 TokenResult { token: Some(Err(())), span, slice } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: format!("Unknown token '{}'", slice),
                         span,
                     })
                 }
                 #[allow(unreachable_patterns)]
                 TokenResult { token: None, span, .. } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: "Unexpected end of file".to_owned(),
                         span,
                     })
@@ -76,7 +76,7 @@ macro_rules! expect_token {
                     span,
                     ..
                 } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: format!(
                             "Expected token '{}' but found '{found:?}'",
                             stringify!($pat)
@@ -89,7 +89,7 @@ macro_rules! expect_token {
                     span,
                     slice,
                 } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: format!("Unknown token {}", slice),
                         span,
                     })
@@ -97,7 +97,7 @@ macro_rules! expect_token {
                 TokenResult {
                     token: None, span, ..
                 } => {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: format!(
                             "Expected token '{}' but reached end of file",
                             stringify!($pat)
@@ -111,26 +111,26 @@ macro_rules! expect_token {
 }
 
 impl Token {
-    fn operator_priority(&self) -> Option<u8> {
+    fn operator_priority(&self) -> Option<(u8, Operator)> {
         match self {
-            Mul => Some(3),
-            Div => Some(3),
-            Plus => Some(2),
-            Minus => Some(2),
-            Mod => Some(1),
-            Eq => Some(0),
-            Ne => Some(0),
-            Lt => Some(0),
-            Le => Some(0),
-            Gt => Some(0),
-            Ge => Some(0),
+            Mul => Some((3, Operator::Mul)),
+            Div => Some((3, Operator::Div)),
+            Plus => Some((2, Operator::Add)),
+            Minus => Some((2, Operator::Sub)),
+            Mod => Some((1, Operator::Mod)),
+            Eq => Some((0, Operator::Eq)),
+            Ne => Some((0, Operator::Ne)),
+            Lt => Some((0, Operator::Lt)),
+            Le => Some((0, Operator::Le)),
+            Gt => Some((0, Operator::Gt)),
+            Ge => Some((0, Operator::Ge)),
             _ => None,
         }
     }
 }
 
 impl<'a> Ast<'a> {
-    pub fn parse(&mut self, source: &'a str) -> Result<(), ParserError> {
+    pub fn parse(&mut self, source: &'a str) -> Result<(), CompilationError> {
         assert!(self.root().is_none());
 
         let mut lexer = Lexer::new(source);
@@ -144,7 +144,7 @@ impl<'a> Ast<'a> {
         } = lexer.next()
         {
             if token != Ok(NewLine) {
-                return Err(ParserError {
+                return Err(CompilationError {
                     message: format!("Expected a single top level function, found {token:?}"),
                     span,
                 });
@@ -154,7 +154,7 @@ impl<'a> Ast<'a> {
         Ok(())
     }
 
-    fn function<'l>(&mut self, lexer: &'l mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn function<'l>(&mut self, lexer: &'l mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         expect_token!(Function, lexer.next());
 
         expect_token!(Identifier(name), lexer.next());
@@ -172,13 +172,16 @@ impl<'a> Ast<'a> {
         }))
     }
 
-    fn function_parameters(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn function_parameters(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         Ok(match_token!(match lexer.peek() {
             Identifier => self.function_parameter_node(lexer)?,
             BracketClose => NULL_EXPR_PTR,
         }))
     }
-    fn function_parameter_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn function_parameter_node(
+        &mut self,
+        lexer: &mut Lexer<'a>,
+    ) -> Result<ExprPtr, CompilationError> {
         expect_token!(Identifier(name), lexer.next());
         let ident = self.push(Expr::VariableDefinition(name));
 
@@ -193,7 +196,7 @@ impl<'a> Ast<'a> {
         Ok(self.push(Expr::ParametersDefinition(ident, next_param)))
     }
 
-    fn statements_block(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn statements_block(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         expect_token!(CurlyOpen, lexer.next());
         let statements = self.statement_node(lexer)?;
         expect_token!(CurlyClose, lexer.next());
@@ -201,13 +204,13 @@ impl<'a> Ast<'a> {
         Ok(statements)
     }
 
-    fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         Ok(match_token!(match lexer.peek() {
             Return => {
                 let TokenResult {
                     span: return_span, ..
                 } = lexer.next();
-                let return_value = self.expr(lexer)?.ok_or_else(|| ParserError {
+                let return_value = self.expr(lexer)?.ok_or_else(|| CompilationError {
                     message: "Expected a return value".to_owned(),
                     span: return_span.and(lexer.peek().span),
                 })?;
@@ -229,7 +232,7 @@ impl<'a> Ast<'a> {
                 let TokenResult {
                     span: while_span, ..
                 } = lexer.next();
-                let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
+                let condition = self.expr(lexer)?.ok_or_else(|| CompilationError {
                     message: "Expected the while condition".to_owned(),
                     span: while_span.and(lexer.peek().span),
                 })?;
@@ -243,7 +246,7 @@ impl<'a> Ast<'a> {
                 let TokenResult { span, .. } = lexer.next();
                 match_token!(match lexer.next() {
                     Assign => {
-                        let value = self.expr(lexer)?.ok_or_else(|| ParserError {
+                        let value = self.expr(lexer)?.ok_or_else(|| CompilationError {
                             message: format!("Expected an expression to assign to '{name}'"),
                             span: span.and(lexer.peek().span),
                         })?;
@@ -272,10 +275,10 @@ impl<'a> Ast<'a> {
         }))
     }
 
-    fn if_statement(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn if_statement(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         expect_token!(If, span, lexer.next());
 
-        let condition = self.expr(lexer)?.ok_or_else(|| ParserError {
+        let condition = self.expr(lexer)?.ok_or_else(|| CompilationError {
             message: "Expected the if condition".to_owned(),
             span: span.and(lexer.peek().span),
         })?;
@@ -299,7 +302,7 @@ impl<'a> Ast<'a> {
         }))
     }
 
-    fn expr_list(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, ParserError> {
+    fn expr_list(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
         if let Some(expr) = self.expr(lexer)? {
             let next_expr = match_token!(match lexer.peek() {
                 Comma => {
@@ -314,7 +317,7 @@ impl<'a> Ast<'a> {
         }
     }
 
-    fn expr(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, ParserError> {
+    fn expr(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, CompilationError> {
         self.expr_node(lexer, 0)
     }
 
@@ -322,18 +325,18 @@ impl<'a> Ast<'a> {
         &mut self,
         lexer: &mut Lexer<'a>,
         min_priority: u8,
-    ) -> Result<Option<ExprPtr>, ParserError> {
+    ) -> Result<Option<ExprPtr>, CompilationError> {
         let Some(mut value) = self.expr_atom(lexer)? else {
             return Ok(None);
         };
 
         while let TokenResult {
-            token: Some(Ok(operator)),
+            token: Some(Ok(token)),
             span,
             ..
         } = lexer.peek()
         {
-            let Some(priority) = operator.operator_priority() else {
+            let Some((priority, operator)) = token.operator_priority() else {
                 break; // The expression has ended
             };
 
@@ -345,33 +348,18 @@ impl<'a> Ast<'a> {
 
             let next_expression =
                 self.expr_node(lexer, priority + 1)?
-                    .ok_or_else(|| ParserError {
+                    .ok_or_else(|| CompilationError {
                         message: format!("Expected an expression after the operator {operator:?}"),
                         span,
                     })?;
 
-            let expr = match operator {
-                Plus => Expr::Add(value, next_expression),
-                Minus => Expr::Sub(value, next_expression),
-                Mul => Expr::Mul(value, next_expression),
-                Div => Expr::Div(value, next_expression),
-                Mod => Expr::Mod(value, next_expression),
-                Eq => Expr::Eq(value, next_expression),
-                Ne => Expr::Ne(value, next_expression),
-                Lt => Expr::Lt(value, next_expression),
-                Le => Expr::Le(value, next_expression),
-                Gt => Expr::Gt(value, next_expression),
-                Ge => Expr::Ge(value, next_expression),
-                _ => unreachable!("All operators should have been matched"),
-            };
-
-            value = self.push(expr);
+            value = self.push(Expr::Operator(operator, value, next_expression));
         }
 
         Ok(Some(value))
     }
 
-    fn expr_atom(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, ParserError> {
+    fn expr_atom(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, CompilationError> {
         Ok(match_token!(match lexer.peek() {
             Identifier(name) => {
                 lexer.next();
@@ -398,7 +386,7 @@ impl<'a> Ast<'a> {
                 expect_token!(BracketClose, close_span, lexer.next());
 
                 if expr.is_none() {
-                    return Err(ParserError {
+                    return Err(CompilationError {
                         message: "Expected an expression inside the '()'".to_owned(),
                         span: open_span.and(close_span),
                     });

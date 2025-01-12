@@ -1,4 +1,7 @@
 mod display;
+mod operator;
+
+pub use operator::*;
 
 use std::{
     mem,
@@ -12,17 +15,7 @@ pub enum Expr<'a> {
     VariableDefinition(&'a str),
     Return(ExprPtr),
     Assign(&'a str, ExprPtr),
-    Eq(ExprPtr, ExprPtr),
-    Ne(ExprPtr, ExprPtr),
-    Lt(ExprPtr, ExprPtr),
-    Le(ExprPtr, ExprPtr),
-    Gt(ExprPtr, ExprPtr),
-    Ge(ExprPtr, ExprPtr),
-    Add(ExprPtr, ExprPtr),
-    Sub(ExprPtr, ExprPtr),
-    Mul(ExprPtr, ExprPtr),
-    Div(ExprPtr, ExprPtr),
-    Mod(ExprPtr, ExprPtr),
+    Operator(Operator, ExprPtr, ExprPtr),
     IfElse {
         condition: ExprPtr,
         then_body: ExprPtr,
