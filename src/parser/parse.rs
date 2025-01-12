@@ -98,14 +98,13 @@ impl<'a> Ast<'a> {
     }
 
     fn statement_node(&mut self, lexer: &mut Lexer<'a>) -> Result<ExprPtr, CompilationError> {
+        let token = lexer.peek();
         Ok(match_token!(match lexer.peek() {
             Return => {
-                let TokenResult {
-                    span: return_span, ..
-                } = lexer.next();
+                lexer.next();
                 let return_value = self.expr(lexer)?.ok_or_else(|| CompilationError {
                     message: "Expected a return value".to_owned(),
-                    span: return_span.and(lexer.peek().span),
+                    span: token.span.and(lexer.peek().span),
                 })?;
 
                 let return_statement = self.push(Expr::Return(return_value));
@@ -122,12 +121,10 @@ impl<'a> Ast<'a> {
                 self.push(Expr::Statements(if_statement, next_statement))
             }
             While => {
-                let TokenResult {
-                    span: while_span, ..
-                } = lexer.next();
+                lexer.next();
                 let condition = self.expr(lexer)?.ok_or_else(|| CompilationError {
                     message: "Expected the while condition".to_owned(),
-                    span: while_span.and(lexer.peek().span),
+                    span: token.span.and(lexer.peek().span),
                 })?;
                 let body = self.statements_block(lexer)?;
                 let while_statement = self.push(Expr::WhileLoop { condition, body });
@@ -135,16 +132,19 @@ impl<'a> Ast<'a> {
                 let next_statement = self.statement_node(lexer)?;
                 self.push(Expr::Statements(while_statement, next_statement))
             }
-            Identifier(name) => {
-                let TokenResult { span, .. } = lexer.next();
+            Identifier => {
+                lexer.next();
                 match_token!(match lexer.next() {
                     Assign => {
                         let value = self.expr(lexer)?.ok_or_else(|| CompilationError {
-                            message: format!("Expected an expression to assign to '{name}'"),
-                            span: span.and(lexer.peek().span),
+                            message: format!(
+                                "Expected an expression to assign to '{}'",
+                                token.slice
+                            ),
+                            span: token.span.and(lexer.peek().span),
                         })?;
 
-                        let assign = self.push(Expr::Assign(name, value));
+                        let assign = self.push(Expr::Assign(token.slice, value));
 
                         let next_statement = self.statement_node(lexer)?;
                         self.push(Expr::Statements(assign, next_statement))
@@ -153,7 +153,7 @@ impl<'a> Ast<'a> {
                         let parameters = self.expr_list(lexer)?;
                         lexer.next().expect(Token::BracketClose)?;
 
-                        let call = self.push(Expr::Call(name, parameters));
+                        let call = self.push(Expr::Call(token.slice, parameters));
 
                         let next_statement = self.statement_node(lexer)?;
                         self.push(Expr::Statements(call, next_statement))
@@ -254,8 +254,9 @@ impl<'a> Ast<'a> {
     }
 
     fn expr_atom(&mut self, lexer: &mut Lexer<'a>) -> Result<Option<ExprPtr>, CompilationError> {
-        Ok(match_token!(match lexer.peek() {
-            Identifier(name) => {
+        let token = lexer.peek();
+        Ok(match_token!(match token {
+            Identifier => {
                 lexer.next();
                 Some(match_token!(match lexer.peek() {
                     BracketOpen => {
@@ -263,26 +264,24 @@ impl<'a> Ast<'a> {
                         let parameters = self.expr_list(lexer)?;
                         lexer.next().expect(Token::BracketClose)?;
 
-                        self.push(Expr::Call(name, parameters))
+                        self.push(Expr::Call(token.slice, parameters))
                     }
-                    _any => self.push(Expr::Variable(name)),
+                    _any => self.push(Expr::Variable(token.slice)),
                 }))
             }
-            Integer(value) => {
+            Integer => {
                 lexer.next();
-                Some(self.push(Expr::Integer(value)))
+                Some(self.push(Expr::Integer(token.slice)))
             }
             BracketOpen => {
-                let TokenResult {
-                    span: open_span, ..
-                } = lexer.next();
+                lexer.next();
                 let expr = self.expr(lexer)?;
                 let close_span = lexer.next().expect(Token::BracketClose)?.span;
 
                 if expr.is_none() {
                     return Err(CompilationError {
                         message: "Expected an expression inside the '()'".to_owned(),
-                        span: open_span.and(close_span),
+                        span: token.span.and(close_span),
                     });
                 }
 
