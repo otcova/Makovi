@@ -1,0 +1,41 @@
+function multiply("a", "b")
+│ (Statement) if lhs >= rhs
+│ │ (lhs) Variable("b")
+│ │ (rhs) Integer("32")
+│ then
+│ │ (Statement) if lhs < rhs
+│ │ │ (lhs) Variable("a")
+│ │ │ (rhs) Variable("b")
+│ │ then
+│ │ │ (Statement) return multiply(...)
+│ │ │ │ │ (Parameter) Variable("b")
+│ │ │ │ │ (Parameter) Variable("a")
+│ (Statement) result = Integer("0")
+│ (Statement) iterations = Variable("b")
+│ (Statement) while lhs >= rhs
+│ │ (lhs) Variable("iterations")
+│ │ (rhs) Integer("4")
+│ then
+│ │ (Statement) result = lhs + rhs
+│ │ │ (lhs) Variable("result")
+│ │ │ (rhs) lhs + rhs
+│ │ │ │ (lhs) lhs + rhs
+│ │ │ │ │ (lhs) Variable("a")
+│ │ │ │ │ (rhs) lhs * rhs
+│ │ │ │ │ │ (lhs) Integer("2")
+│ │ │ │ │ │ (rhs) Variable("a")
+│ │ │ │ (rhs) Variable("a")
+│ │ (Statement) iterations = lhs - rhs
+│ │ │ (lhs) Variable("iterations")
+│ │ │ (rhs) Integer("4")
+│ (Statement) while lhs >= rhs
+│ │ (lhs) Variable("iterations")
+│ │ (rhs) Integer("1")
+│ then
+│ │ (Statement) result = lhs + rhs
+│ │ │ (lhs) Variable("result")
+│ │ │ (rhs) Variable("a")
+│ │ (Statement) iterations = lhs - rhs
+│ │ │ (lhs) Variable("iterations")
+│ │ │ (rhs) Integer("1")
+│ (Statement) return Variable("result")

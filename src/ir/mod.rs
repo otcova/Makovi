@@ -21,7 +21,7 @@ struct FunctionTranslator<'ast, 'build, M: Module> {
     ast: &'ast Ast<'ast>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum ExprValue {
     Primitive(Value),
     Null,
@@ -67,14 +67,9 @@ impl<M: Module> CodeIr<M> {
     pub fn load<'a>(&mut self, ast: &'a Ast<'a>) -> Result<FuncId, String> {
         let id = self.translate_function(ast, ast.root().unwrap())?;
 
-        // Define the function to jit. This finishes compilation, although
-        // there may be outstanding relocations to perform. Currently, jit
-        // cannot finish relocations until all functions to be called are
-        // defined. For this toy demo for now, we'll just finalize the
-        // function below.
         self.module
             .define_function(id, &mut self.context)
-            .map_err(|e| format!("Compilation error: {}", e))?;
+            .map_err(|e| format!("{e}"))?;
 
         Ok(id)
     }

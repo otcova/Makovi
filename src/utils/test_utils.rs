@@ -1,4 +1,4 @@
-use std::iter;
+use std::fmt::Write;
 
 macro_rules! gen_tests {
     ($generic_test:ident(bench, code, test_name)) => {
@@ -11,7 +11,7 @@ macro_rules! gen_tests {
     ($generic_test:ident(bench, code, test_name, input, output)) => {
         gen_tests!{
             #$generic_test
-            old_mult(2, 5) = 10;
+            multiply(132, 431321) = 132 * 431321;
             smallest_factor(53 * 59) = 53;
         }
     };
@@ -39,27 +39,47 @@ pub fn load_src(name: &str, sufix: &str) -> String {
 
 pub fn assert_source_eq(expected: &str, actual: &str) {
     if expected.trim() != actual.trim() {
-        println!("Expected:");
-        println!("{expected}");
-        println!();
-        println!("But was:");
         println!("{}", diff_source(expected, actual));
         panic!();
     }
 }
 
-fn diff_source(expected: &str, parsed: &str) -> String {
-    let expected = expected.trim().lines();
-    let parsed = parsed.trim().lines();
+fn diff_source(expected: &str, actual: &str) -> String {
+    let expected = expected.trim();
+    let actual = actual.trim();
 
-    let mut result = Vec::new();
-    for (l1, l2) in parsed.zip(expected.chain(iter::repeat(""))) {
+    let (lines, width) = expected.lines().fold((0, 0), |(lines, width), line| {
+        (lines + 1, width.max(line.len()))
+    });
+
+    let mut expected = expected.trim().lines();
+    let mut actual = actual.trim().lines();
+
+    let mut result = String::with_capacity((width * 2 + 4) * (lines + 2));
+    writeln!(result, "{:<width$} ║ But was", "Expected").unwrap();
+    for _ in 0..width {
+        result.push('═');
+    }
+    result.push_str("═╬═");
+    for _ in 0..width {
+        result.push('═');
+    }
+    result.push('\n');
+
+    loop {
+        let (l1, l2) = match (expected.next(), actual.next()) {
+            (Some(l1), Some(l2)) => (l1, l2),
+            (None, Some(l2)) => ("", l2),
+            (Some(l1), None) => (l1, ""),
+            (None, None) => break,
+        };
+
         if l1 == l2 {
-            result.push(l1.to_string());
+            writeln!(&mut result, "{l1:<width$} ║ {l2}").unwrap();
         } else {
-            result.push(format!("\x1b[0;31m{l1}\x1b[0m"));
+            writeln!(&mut result, "{l1:<width$} ║ \x1b[0;31m{l2}\x1b[0m").unwrap();
         }
     }
 
-    result.join("\n")
+    result
 }

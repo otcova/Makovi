@@ -31,6 +31,9 @@ tokens! {
     While "while"
 
     Assign "="
+    AddAssign "+="
+    SubAssign "-="
+
     Eq "=="
     Ne "!="
     Lt "<"

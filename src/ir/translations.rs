@@ -5,13 +5,15 @@ use cranelift_module::{Linkage, Module};
 impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
     const VAR_TYPE: types::Type = types::I64;
 
-    pub fn literal(&mut self, literal: &str) -> ExprValue {
+    pub fn integer(&mut self, literal: &str) -> ExprValue {
         let imm: i64 = literal.parse().unwrap();
         ExprValue::Primitive(self.builder.ins().iconst(Self::VAR_TYPE, imm))
     }
-    pub fn identifier(&mut self, name: &str) -> ExprValue {
-        // `use_var` is used to read the value of a variable.
-        let variable = self.variables.get(name).expect("variable not defined");
+    pub fn variable(&mut self, name: &str) -> ExprValue {
+        let variable = self
+            .variables
+            .get(name)
+            .unwrap_or_else(|| panic!("Variable {name} not defined"));
         ExprValue::Primitive(self.builder.use_var(*variable))
     }
     pub fn assign(&mut self, name: &'a str, value: ExprValue) -> ExprValue {
@@ -101,7 +103,11 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         // Then
         self.builder.switch_to_block(then_block);
         self.builder.seal_block(then_block);
-        then_body(self);
+        let then_result = then_body(self);
+
+        if ExprValue::Unreachable != then_result {
+            self.builder.ins().jump(finally_block, &[]);
+        }
 
         // Finally
         self.builder.switch_to_block(finally_block);

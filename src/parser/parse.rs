@@ -134,6 +134,29 @@ impl<'a> AstParser<'a> {
 
                         self.ast.push(Expr::Assign(token.slice, value))
                     }
+                    AddAssign => {
+                        let value = self.expr()?.ok_or_else(|| CompilationError {
+                            message: format!("Expected an expression to add to '{}'", token.slice),
+                            span: token.span.and(self.lexer.peek().span),
+                        })?;
+
+                        let var = self.ast.push(Expr::Variable(token.slice));
+                        let result = self.ast.push(Expr::Operator(Operator::Add, var, value));
+                        self.ast.push(Expr::Assign(token.slice, result))
+                    }
+                    SubAssign => {
+                        let value = self.expr()?.ok_or_else(|| CompilationError {
+                            message: format!(
+                                "Expected an expression to subtract to '{}'",
+                                token.slice
+                            ),
+                            span: token.span.and(self.lexer.peek().span),
+                        })?;
+
+                        let var = self.ast.push(Expr::Variable(token.slice));
+                        let result = self.ast.push(Expr::Operator(Operator::Sub, var, value));
+                        self.ast.push(Expr::Assign(token.slice, result))
+                    }
                     BracketOpen => {
                         let parameters = self.expr_list()?;
                         self.lexer.next().expect(Token::BracketClose)?;
