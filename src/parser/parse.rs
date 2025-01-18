@@ -66,17 +66,43 @@ impl<'a> AstParser<'a> {
     }
 
     fn statements_block(&mut self, nesting: usize) -> Result<ExprPtr, CompilationError> {
-        let statements = self.statement_node(nesting)?;
+        let mut node = self.statement_node(nesting)?;
 
-        Ok(statements)
+        // Empty block
+        if node == NULL_EXPR_PTR {
+            return Ok(NULL_EXPR_PTR);
+        }
+
+        let first_statement = self.ast.push(Expr::Statements(node, NULL_EXPR_PTR));
+        let mut previous_statement = first_statement;
+
+        loop {
+            node = self.statement_node(nesting)?;
+
+            // Block ended
+            if node == NULL_EXPR_PTR {
+                break;
+            }
+
+            let statement = self.ast.push(Expr::Statements(node, NULL_EXPR_PTR));
+
+            match &mut self.ast[previous_statement] {
+                Expr::Statements(_, next) => *next = statement,
+                _ => unreachable!(),
+            }
+
+            previous_statement = statement;
+        }
+
+        Ok(first_statement)
     }
 
     fn statement_node(&mut self, block_nesting: usize) -> Result<ExprPtr, CompilationError> {
-        let token = self.lexer.peek();
+        let mut token = self.lexer.peek();
 
-        if token.token == Some(Ok(NewLine)) {
+        while token.token == Some(Ok(NewLine)) {
             self.lexer.next();
-            return self.statement_node(block_nesting);
+            token = self.lexer.peek();
         }
 
         match token.nesting()?.cmp(&block_nesting) {
@@ -91,41 +117,9 @@ impl<'a> AstParser<'a> {
         }
 
         Ok(match_token!(match self.lexer.peek() {
-            Return => {
-                self.lexer.next();
-                let return_value = self.expr()?.ok_or_else(|| CompilationError {
-                    message: "Expected a return value".to_owned(),
-                    span: token.span.and(self.lexer.peek().span),
-                })?;
-
-                let return_statement = self.ast.push(Expr::Return(return_value));
-
-                // TODO: Consume/Skip dead code without pushing nodes
-                self.statement_node(block_nesting)?;
-
-                self.ast
-                    .push(Expr::Statements(return_statement, NULL_EXPR_PTR))
-            }
-            If => {
-                let if_statement = self.if_statement(block_nesting)?;
-
-                let next_statement = self.statement_node(block_nesting)?;
-                self.ast
-                    .push(Expr::Statements(if_statement, next_statement))
-            }
-            While => {
-                self.lexer.next();
-                let condition = self.expr()?.ok_or_else(|| CompilationError {
-                    message: "Expected the while condition".to_owned(),
-                    span: token.span.and(self.lexer.peek().span),
-                })?;
-                let body = self.statements_block(block_nesting + 1)?;
-                let while_statement = self.ast.push(Expr::WhileLoop { condition, body });
-
-                let next_statement = self.statement_node(block_nesting)?;
-                self.ast
-                    .push(Expr::Statements(while_statement, next_statement))
-            }
+            Return => self.return_statement()?,
+            If => self.if_statement(block_nesting)?,
+            While => self.while_statement(block_nesting)?,
             Identifier => {
                 self.lexer.next();
                 match_token!(match self.lexer.next() {
@@ -138,23 +132,40 @@ impl<'a> AstParser<'a> {
                             span: token.span.and(self.lexer.peek().span),
                         })?;
 
-                        let assign = self.ast.push(Expr::Assign(token.slice, value));
-
-                        let next_statement = self.statement_node(block_nesting)?;
-                        self.ast.push(Expr::Statements(assign, next_statement))
+                        self.ast.push(Expr::Assign(token.slice, value))
                     }
                     BracketOpen => {
                         let parameters = self.expr_list()?;
                         self.lexer.next().expect(Token::BracketClose)?;
 
-                        let call = self.ast.push(Expr::Call(token.slice, parameters));
-
-                        let next_statement = self.statement_node(block_nesting)?;
-                        self.ast.push(Expr::Statements(call, next_statement))
+                        self.ast.push(Expr::Call(token.slice, parameters))
                     }
                 })
             }
         }))
+    }
+
+    fn return_statement(&mut self) -> Result<ExprPtr, CompilationError> {
+        let span = self.lexer.next().expect(Token::Return)?.span;
+
+        let return_value = self.expr()?.ok_or_else(|| CompilationError {
+            message: "Expected a return value".to_owned(),
+            span: span.and(self.lexer.peek().span),
+        })?;
+
+        Ok(self.ast.push(Expr::Return(return_value)))
+    }
+
+    fn while_statement(&mut self, while_nesting: usize) -> Result<ExprPtr, CompilationError> {
+        let span = self.lexer.next().expect(Token::While)?.span;
+
+        let condition = self.expr()?.ok_or_else(|| CompilationError {
+            message: "Expected the while condition".to_owned(),
+            span: span.and(self.lexer.peek().span),
+        })?;
+
+        let body = self.statements_block(while_nesting + 1)?;
+        Ok(self.ast.push(Expr::WhileLoop { condition, body }))
     }
 
     fn if_statement(&mut self, if_nesting: usize) -> Result<ExprPtr, CompilationError> {
