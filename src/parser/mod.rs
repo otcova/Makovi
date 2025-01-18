@@ -1,18 +1,25 @@
 mod parse;
 
-use crate::ast::*;
 use crate::error::*;
+use crate::{ast::*, lexer::Lexer};
 
 #[derive(Default)]
 pub struct Parser {
     ast_context: AstContext,
 }
 
+struct AstParser<'a> {
+    ast: Ast<'a>,
+    lexer: Lexer<'a>,
+}
+
 impl Parser {
     pub fn parse<'c>(&'c mut self, code: &'c str) -> Result<Ast<'c>, CompilationError> {
-        let mut ast = self.ast_context.create_ast();
-        ast.parse(code)?;
-        Ok(ast)
+        AstParser {
+            ast: self.ast_context.create_ast(),
+            lexer: Lexer::new(code),
+        }
+        .parse()
     }
 }
 

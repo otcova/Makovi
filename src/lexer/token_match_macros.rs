@@ -1,22 +1,26 @@
 macro_rules! match_token {
-    (
-        match $lexer:ident$(.$fn:ident())? {
-            $($token:pat => $then:expr$(,)?)*
-        }
-    ) => {
+    ( match $token:ident { $($pat:pat => $then:expr$(,)?)* }) => {
         {
-        let token = $lexer$(.$fn())?;
-        match token.expect_token()? {
-            $($token => $then,)*
+        use Token::*;
+        let $token = $token;
+        match $token.expect_token()? {
+            $($pat => $then,)*
 
             #[allow(unreachable_patterns)]
             found => {
                 return Err(CompilationError {
                     message: format!( "Unexpected token '{found:?}'"),
-                    span: token.span,
+                    span: $token.span,
                 })
             }
         }
+        }
+    };
+
+    ( match $self:ident.$token:ident.$fn:ident() { $($pat:pat => $then:expr$(,)?)* }) => {
+        {
+        let token = $self.$token.$fn();
+        match_token! { match token { $($pat => $then,)* }}
         }
     };
 }

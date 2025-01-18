@@ -8,7 +8,6 @@ mod ast;
 mod error;
 mod ir;
 mod jit;
-mod lazy_parser;
 mod lexer;
 mod parser;
 mod utils;
