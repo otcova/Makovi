@@ -3,6 +3,7 @@ use crate::ast::*;
 use crate::error::CompilationError;
 use crate::lexer::Token::*;
 use crate::lexer::*;
+use std::cmp::Ordering;
 
 impl<'a> AstParser<'a> {
     pub fn parse(mut self) -> Result<Ast<'a>, CompilationError> {
@@ -34,7 +35,7 @@ impl<'a> AstParser<'a> {
         let parameters = self.function_parameters()?;
         self.lexer.next().expect(Token::BracketClose)?;
 
-        let body = self.statements_block()?;
+        let body = self.statements_block(1)?;
 
         Ok(self.ast.push(Expr::Function {
             name,
@@ -64,16 +65,31 @@ impl<'a> AstParser<'a> {
         Ok(self.ast.push(Expr::ParametersDefinition(ident, next_param)))
     }
 
-    fn statements_block(&mut self) -> Result<ExprPtr, CompilationError> {
-        self.lexer.next().expect(Token::CurlyOpen)?;
-        let statements = self.statement_node()?;
-        self.lexer.next().expect(Token::CurlyClose)?;
+    fn statements_block(&mut self, nesting: usize) -> Result<ExprPtr, CompilationError> {
+        let statements = self.statement_node(nesting)?;
 
         Ok(statements)
     }
 
-    fn statement_node(&mut self) -> Result<ExprPtr, CompilationError> {
+    fn statement_node(&mut self, block_nesting: usize) -> Result<ExprPtr, CompilationError> {
         let token = self.lexer.peek();
+
+        if token.token == Some(Ok(NewLine)) {
+            self.lexer.next();
+            return self.statement_node(block_nesting);
+        }
+
+        match token.nesting()?.cmp(&block_nesting) {
+            Ordering::Equal => {}
+            Ordering::Less => return Ok(NULL_EXPR_PTR),
+            Ordering::Greater => {
+                return Err(CompilationError {
+                    message: "Unexpected high nesting".to_owned(),
+                    span: token.nesting_span(),
+                })
+            }
+        }
+
         Ok(match_token!(match self.lexer.peek() {
             Return => {
                 self.lexer.next();
@@ -85,15 +101,15 @@ impl<'a> AstParser<'a> {
                 let return_statement = self.ast.push(Expr::Return(return_value));
 
                 // TODO: Consume/Skip dead code without pushing nodes
-                self.statement_node()?;
+                self.statement_node(block_nesting)?;
 
                 self.ast
                     .push(Expr::Statements(return_statement, NULL_EXPR_PTR))
             }
             If => {
-                let if_statement = self.if_statement()?;
+                let if_statement = self.if_statement(block_nesting)?;
 
-                let next_statement = self.statement_node()?;
+                let next_statement = self.statement_node(block_nesting)?;
                 self.ast
                     .push(Expr::Statements(if_statement, next_statement))
             }
@@ -103,10 +119,10 @@ impl<'a> AstParser<'a> {
                     message: "Expected the while condition".to_owned(),
                     span: token.span.and(self.lexer.peek().span),
                 })?;
-                let body = self.statements_block()?;
+                let body = self.statements_block(block_nesting + 1)?;
                 let while_statement = self.ast.push(Expr::WhileLoop { condition, body });
 
-                let next_statement = self.statement_node()?;
+                let next_statement = self.statement_node(block_nesting)?;
                 self.ast
                     .push(Expr::Statements(while_statement, next_statement))
             }
@@ -124,7 +140,7 @@ impl<'a> AstParser<'a> {
 
                         let assign = self.ast.push(Expr::Assign(token.slice, value));
 
-                        let next_statement = self.statement_node()?;
+                        let next_statement = self.statement_node(block_nesting)?;
                         self.ast.push(Expr::Statements(assign, next_statement))
                     }
                     BracketOpen => {
@@ -133,27 +149,22 @@ impl<'a> AstParser<'a> {
 
                         let call = self.ast.push(Expr::Call(token.slice, parameters));
 
-                        let next_statement = self.statement_node()?;
+                        let next_statement = self.statement_node(block_nesting)?;
                         self.ast.push(Expr::Statements(call, next_statement))
                     }
                 })
             }
-            NewLine => {
-                self.lexer.next();
-                self.statement_node()?
-            }
-            CurlyClose => NULL_EXPR_PTR,
         }))
     }
 
-    fn if_statement(&mut self) -> Result<ExprPtr, CompilationError> {
+    fn if_statement(&mut self, if_nesting: usize) -> Result<ExprPtr, CompilationError> {
         let span = self.lexer.next().expect(Token::If)?.span;
 
         let condition = self.expr()?.ok_or_else(|| CompilationError {
             message: "Expected the if condition".to_owned(),
             span: span.and(self.lexer.peek().span),
         })?;
-        let then_body = self.statements_block()?;
+        let then_body = self.statements_block(if_nesting + 1)?;
 
         let mut else_body = NULL_EXPR_PTR;
 
@@ -161,8 +172,8 @@ impl<'a> AstParser<'a> {
             self.lexer.next();
 
             else_body = match_token!(match self.lexer.peek() {
-                If => self.if_statement(),
-                CurlyOpen => self.statements_block(),
+                If => self.if_statement(if_nesting),              // else if
+                NewLine => self.statements_block(if_nesting + 1), // else
             })?;
         }
 

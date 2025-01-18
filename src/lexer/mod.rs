@@ -16,6 +16,7 @@ pub struct TokenResult<'a> {
     pub token: Option<Result<Token, ()>>,
     pub slice: &'a str,
     pub span: LineSpan,
+    indent: usize,
 }
 
 impl TokenResult<'_> {
@@ -47,13 +48,21 @@ impl TokenResult<'_> {
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a str) -> Self {
+        let trimed_source = source.trim_start_matches(' ');
+        let context = LexerContext {
+            line_number: 1,
+            line_char_index: 0,
+            indent: source.len() - trimed_source.len(),
+        };
+
         let mut lexer = Self {
             token: TokenResult {
                 token: None,
                 slice: "",
                 span: LineSpan::default(),
+                indent: 0,
             },
-            lexer: Token::lexer(source),
+            lexer: Token::lexer_with_extras(trimed_source, context),
         };
         lexer.next();
         lexer
@@ -74,6 +83,7 @@ impl<'a> Lexer<'a> {
                 token,
                 slice,
                 span: line_span,
+                indent: self.lexer.extras.indent,
             },
         )
     }
@@ -84,25 +94,19 @@ impl<'a> Lexer<'a> {
 }
 
 #[derive(Clone, Copy)]
-pub struct LexerLineContext {
+pub struct LexerContext {
     line_number: usize,
     line_char_index: usize,
+    indent: usize,
 }
 
-impl Default for LexerLineContext {
-    fn default() -> Self {
-        Self {
-            line_number: 1,
-            line_char_index: 0,
-        }
-    }
-}
-
-impl LexerLineContext {
+impl LexerContext {
     fn new_line(&mut self, new_line_char_span: Span) {
         self.line_number += 1;
-        self.line_char_index = new_line_char_span.end;
+        self.line_char_index = new_line_char_span.start + 1;
+        self.indent = new_line_char_span.len() - 1;
     }
+
     fn span(&self, span: Span) -> LineSpan {
         LineSpan {
             start: LineColumnNumber {
@@ -114,5 +118,35 @@ impl LexerLineContext {
                 column: span.end - self.line_char_index,
             },
         }
+    }
+}
+
+impl TokenResult<'_> {
+    pub fn nesting_span(&self) -> LineSpan {
+        LineSpan {
+            start: LineColumnNumber {
+                line: self.span.start.line,
+                column: 1,
+            },
+            end: LineColumnNumber {
+                line: self.span.start.line,
+                column: self.indent,
+            },
+        }
+    }
+
+    pub fn nesting(&self) -> Result<usize, CompilationError> {
+        const INDENT_SIZE: usize = 4;
+        if self.indent % INDENT_SIZE != 0 {
+            return Err(CompilationError {
+                message: format!(
+                    "Invalid indentation of {} spaces. Expected an indentation multiple of {}",
+                    self.indent, INDENT_SIZE
+                ),
+                span: self.nesting_span(),
+            });
+        }
+
+        Ok(self.indent / INDENT_SIZE)
     }
 }

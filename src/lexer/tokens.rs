@@ -5,8 +5,8 @@ use logos::Logos;
 macro_rules! tokens {
     ($($name:ident $(/$regex:literal/)? $($token:literal)?)*) => {
         #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
-        #[logos(skip r" ")]
-        #[logos(extras = LexerLineContext)]
+        #[logos(skip r" +")]
+        #[logos(extras = LexerContext)]
         pub enum Token {
             $(
                 $(#[regex($regex)])?
@@ -22,9 +22,6 @@ tokens! {
     Return "return"
 
     Comma ","
-
-    CurlyOpen "{"
-    CurlyClose "}"
 
     BracketOpen "("
     BracketClose ")"
@@ -50,7 +47,7 @@ tokens! {
     Identifier /"[a-zA-Z_]+"/
     Integer /"[0-9]+"/
 
-    NewLine "\n"
+    NewLine /"\n *"/
 }
 
 impl Token {
