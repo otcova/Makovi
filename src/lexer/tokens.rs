@@ -34,6 +34,12 @@ tokens! {
     AddAssign "+="
     SubAssign "-="
 
+    Add "+"
+    Sub "-"
+    Mul "*"
+    Div "/"
+    Mod "mod"
+
     Eq "=="
     Ne "!="
     Lt "<"
@@ -41,33 +47,33 @@ tokens! {
     Gt ">"
     Ge ">="
 
-    Plus "+"
-    Minus "-"
-    Mul "*"
-    Div "/"
-    Mod "mod"
+    And "and"
+    Or "or"
+    XOr "xor"
 
     Identifier /"[a-zA-Z_]+"/
     Integer /"[0-9]+"/
+    True "true"
+    False "false"
 
     NewLine /"\n *"/
 }
 
-impl Token {
-    pub fn get_operator(&self) -> Option<Operator> {
-        match self {
-            Token::Mul => Some(Operator::Mul),
-            Token::Div => Some(Operator::Div),
-            Token::Plus => Some(Operator::Add),
-            Token::Minus => Some(Operator::Sub),
-            Token::Mod => Some(Operator::Mod),
-            Token::Eq => Some(Operator::Eq),
-            Token::Ne => Some(Operator::Ne),
-            Token::Lt => Some(Operator::Lt),
-            Token::Le => Some(Operator::Le),
-            Token::Gt => Some(Operator::Gt),
-            Token::Ge => Some(Operator::Ge),
-            _ => None,
+macro_rules! into_operator {
+    ($($operator:ident)*) => {
+        impl Token {
+            pub fn get_operator(&self) -> Option<Operator> {
+                match self {
+                    $(Token::$operator => Some(Operator::$operator),)*
+                    _ => None,
+                }
+            }
         }
-    }
+    };
+}
+
+into_operator! {
+    Add Sub Mul Div Mod
+    Eq Ne Lt Le Gt Ge
+    And Or XOr
 }

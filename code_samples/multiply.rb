@@ -1,8 +1,6 @@
 function multiply(a, b)
-    if b >= 32
-        if a < b
-            return multiply(b, a)
-
+    if b >= 32 and a < b or false
+        return multiply(b, a)
 
     result = 0
     iterations = b

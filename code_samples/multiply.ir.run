@@ -3,60 +3,55 @@ function u0:0(i64, i64) -> i64 system_v {
     fn0 = u0:0 sig0
 
 block0(v0: i64, v1: i64):
-    v12 -> v0
-    v20 -> v0
-    v26 -> v0
-    v7 -> v1
+    v14 -> v0
+    v27 -> v0
     v2 = iconst.i64 32
     v3 = icmp sge v1, v2  ; v2 = 32
-    brif v3, block1, block2
+    v4 = icmp slt v0, v1
+    v5 = band v3, v4
+    v6 = iconst.i8 0
+    v7 = bor v5, v6  ; v6 = 0
+    brif v7, block1, block2
 
 block1:
-    v4 = icmp.i64 slt v0, v1
-    brif v4, block3, block4
-
-block3:
-    v5 = call fn0(v1, v0)
-    return v5
-
-block4:
-    jump block2
+    v8 = call fn0(v1, v0)
+    return v8
 
 block2:
-    v6 = iconst.i64 0
-    jump block5(v1, v6)  ; v6 = 0
+    v9 = iconst.i64 0
+    jump block3(v1, v9)  ; v9 = 0
 
-block5(v8: i64, v11: i64):
-    v9 = iconst.i64 4
-    v10 = icmp sge v8, v9  ; v9 = 4
-    brif v10, block6, block7
+block3(v10: i64, v13: i64):
+    v11 = iconst.i64 4
+    v12 = icmp sge v10, v11  ; v11 = 4
+    brif v12, block4, block5
 
-block6:
-    v13 = iconst.i64 2
-    v14 = imul v13, v12  ; v13 = 2
-    v15 = iadd.i64 v12, v14
-    v16 = iadd v15, v12
-    v17 = iadd.i64 v11, v16
-    v18 = iconst.i64 4
-    v19 = isub.i64 v8, v18  ; v18 = 4
-    jump block5(v19, v17)
+block4:
+    v15 = iconst.i64 2
+    v16 = imul v15, v14  ; v15 = 2
+    v17 = iadd.i64 v14, v16
+    v18 = iadd v17, v14
+    v19 = iadd.i64 v13, v18
+    v20 = iconst.i64 4
+    v21 = isub.i64 v10, v20  ; v20 = 4
+    jump block3(v21, v19)
+
+block5:
+    v22 = iconst.i64 0
+    jump block6(v10, v13)
+
+block6(v23: i64, v26: i64):
+    v24 = iconst.i64 1
+    v25 = icmp sge v23, v24  ; v24 = 1
+    brif v25, block7, block8
 
 block7:
-    v21 = iconst.i64 0
-    jump block8(v8, v11)
+    v28 = iadd.i64 v26, v27
+    v29 = iconst.i64 1
+    v30 = isub.i64 v23, v29  ; v29 = 1
+    jump block6(v30, v28)
 
-block8(v22: i64, v25: i64):
-    v23 = iconst.i64 1
-    v24 = icmp sge v22, v23  ; v23 = 1
-    brif v24, block9, block10
-
-block9:
-    v27 = iadd.i64 v25, v26
-    v28 = iconst.i64 1
-    v29 = isub.i64 v22, v28  ; v28 = 1
-    jump block8(v29, v27)
-
-block10:
-    v30 = iconst.i64 0
-    return v25
+block8:
+    v31 = iconst.i64 0
+    return v26
 }

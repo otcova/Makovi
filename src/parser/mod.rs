@@ -32,7 +32,7 @@ mod tests {
     gen_tests!(generic_test(bench, code, test_name));
 
     fn generic_test(b: &mut Bencher, code: &str, test_name: &str) {
-        let expected = &load_src(test_name, ".ast");
+        let expected = &load_src(test_name, ".ast.run");
         let mut parser = Parser::default();
 
         let ast = &format!("{}", parser.parse(code).unwrap());

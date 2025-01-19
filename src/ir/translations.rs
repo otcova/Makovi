@@ -3,94 +3,70 @@ use cranelift::prelude::*;
 use cranelift_module::{Linkage, Module};
 
 impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
-    const VAR_TYPE: types::Type = types::I64;
+    const INT_TYPE: types::Type = types::I64;
+    const BOOL_TYPE: types::Type = types::I8;
 
     pub fn integer(&mut self, literal: &str) -> ExprValue {
         let imm: i64 = literal.parse().unwrap();
-        ExprValue::Primitive(self.builder.ins().iconst(Self::VAR_TYPE, imm))
+        ExprValue::I64(self.builder.ins().iconst(Self::INT_TYPE, imm))
+    }
+    pub fn bool(&mut self, bool: bool) -> ExprValue {
+        ExprValue::Bool(self.builder.ins().iconst(Self::BOOL_TYPE, bool as i64))
     }
     pub fn variable(&mut self, name: &str) -> ExprValue {
         let variable = self
             .variables
             .get(name)
             .unwrap_or_else(|| panic!("Variable {name} not defined"));
-        ExprValue::Primitive(self.builder.use_var(*variable))
+        ExprValue::I64(self.builder.use_var(*variable))
     }
     pub fn assign(&mut self, name: &'a str, value: ExprValue) -> ExprValue {
-        let value = value.expect_primitive();
+        let value = value.expect_int();
         let variable = self.get_variable(name);
         self.builder.def_var(variable, value);
-        ExprValue::Primitive(value)
+        ExprValue::I64(value)
     }
-    pub fn eq(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().icmp(IntCC::Equal, lhs, rhs))
+
+    pub fn operator(&mut self, operator: Operator, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
+        let ins = self.builder.ins();
+
+        use ExprValue::*;
+        use IntCC::*;
+        use Operator::*;
+
+        match (lhs, rhs) {
+            (I64(lhs), I64(rhs)) => match operator {
+                Eq => Bool(ins.icmp(Equal, lhs, rhs)),
+                Ne => Bool(ins.icmp(NotEqual, lhs, rhs)),
+                Lt => Bool(ins.icmp(SignedLessThan, lhs, rhs)),
+                Le => Bool(ins.icmp(SignedLessThanOrEqual, lhs, rhs)),
+                Gt => Bool(ins.icmp(SignedGreaterThan, lhs, rhs)),
+                Ge => Bool(ins.icmp(SignedGreaterThanOrEqual, lhs, rhs)),
+                Add => I64(ins.iadd(lhs, rhs)),
+                Sub => I64(ins.isub(lhs, rhs)),
+                Mul => I64(ins.imul(lhs, rhs)),
+                Div => I64(ins.udiv(lhs, rhs)),
+                Mod => I64(ins.urem(lhs, rhs)),
+                _ => panic!("Operator {operator:?} is not for integers"),
+            },
+            (Bool(lhs), Bool(rhs)) => match operator {
+                Eq => Bool(ins.icmp(Equal, lhs, rhs)),
+                Ne => Bool(ins.icmp(NotEqual, lhs, rhs)),
+                And => Bool(ins.band(lhs, rhs)),
+                Or => Bool(ins.bor(lhs, rhs)),
+                XOr => Bool(ins.bxor(lhs, rhs)),
+                _ => panic!("Operator {operator:?} is not for booleans"),
+            },
+            (lhs, rhs) => panic!("Operator {operator:?} can't compare {lhs:?} with {rhs:?}"),
+        }
     }
-    pub fn ne(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().icmp(IntCC::NotEqual, lhs, rhs))
-    }
-    pub fn lt(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().icmp(IntCC::SignedLessThan, lhs, rhs))
-    }
-    pub fn le(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(
-            self.builder
-                .ins()
-                .icmp(IntCC::SignedLessThanOrEqual, lhs, rhs),
-        )
-    }
-    pub fn gt(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().icmp(IntCC::SignedGreaterThan, lhs, rhs))
-    }
-    pub fn ge(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(
-            self.builder
-                .ins()
-                .icmp(IntCC::SignedGreaterThanOrEqual, lhs, rhs),
-        )
-    }
-    pub fn add(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().iadd(lhs, rhs))
-    }
-    pub fn sub(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().isub(lhs, rhs))
-    }
-    pub fn mul(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().imul(lhs, rhs))
-    }
-    pub fn div(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().udiv(lhs, rhs))
-    }
-    pub fn module(&mut self, lhs: ExprValue, rhs: ExprValue) -> ExprValue {
-        let lhs = lhs.expect_primitive();
-        let rhs = rhs.expect_primitive();
-        ExprValue::Primitive(self.builder.ins().urem(lhs, rhs))
-    }
+
     pub fn if_statement(
         &mut self,
         condition: ExprValue,
         then_body: impl FnOnce(&mut Self) -> ExprValue,
     ) -> ExprValue {
-        let condition = condition.expect_primitive();
+        let condition = condition.expect_bool();
 
         let then_block = self.builder.create_block();
         let finally_block = self.builder.create_block();
@@ -103,9 +79,8 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         // Then
         self.builder.switch_to_block(then_block);
         self.builder.seal_block(then_block);
-        let then_result = then_body(self);
 
-        if ExprValue::Unreachable != then_result {
+        if ExprValue::Unreachable != then_body(self) {
             self.builder.ins().jump(finally_block, &[]);
         }
 
@@ -122,7 +97,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         then_body: impl FnOnce(&mut Self) -> ExprValue,
         else_body: impl FnOnce(&mut Self) -> ExprValue,
     ) -> ExprValue {
-        let condition = condition.expect_primitive();
+        let condition = condition.expect_bool();
 
         let then_block = self.builder.create_block();
         let else_block = self.builder.create_block();
@@ -177,7 +152,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.ins().jump(header_block, &[]);
         self.builder.switch_to_block(header_block);
 
-        let condition_result = condition(self).expect_primitive();
+        let condition_result = condition(self).expect_bool();
 
         self.builder
             .ins()
@@ -198,16 +173,16 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
         self.builder.seal_block(exit_block);
 
         // Just return 0 for now.
-        self.builder.ins().iconst(Self::VAR_TYPE, 0);
+        self.builder.ins().iconst(Self::INT_TYPE, 0);
     }
     pub fn prepare_parameters(parameters: impl Iterator<Item = ExprValue>) -> Vec<Value> {
-        parameters.map(|v| v.expect_primitive()).collect()
+        parameters.map(|v| v.expect_int()).collect()
     }
     pub fn call(&mut self, name: &str, parameters: &[Value]) -> ExprValue {
         // Create Signature
         let mut sig = self.module.make_signature();
-        sig.params = vec![AbiParam::new(Self::VAR_TYPE); parameters.len()];
-        sig.returns.push(AbiParam::new(Self::VAR_TYPE));
+        sig.params = vec![AbiParam::new(Self::INT_TYPE); parameters.len()];
+        sig.returns.push(AbiParam::new(Self::INT_TYPE));
 
         // TODO: Streamline the API here?
         let callee = self
@@ -221,7 +196,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
     }
 
     pub fn function_return(&mut self, return_value: ExprValue) {
-        let return_value = return_value.expect_primitive();
+        let return_value = return_value.expect_int();
         self.builder.ins().return_(&[return_value]);
     }
 
@@ -265,7 +240,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             let var_index = self.variables.len();
             let var = Variable::new(var_index);
             self.variables.insert(name, var);
-            self.builder.declare_var(var, Self::VAR_TYPE);
+            self.builder.declare_var(var, Self::INT_TYPE);
             var
         })
     }

@@ -7,10 +7,10 @@ function smallest_factor(number)
         return 5
 
     factor = 7
-    while factor < number
+    while factor < number / 5
         if number mod factor == 0
             return factor
-        else if number mod factor + 3 == 0
+        else if number mod (factor + 3) == 0
             return factor + 3
         else if number mod (factor + 6) == 0
             return factor + 6

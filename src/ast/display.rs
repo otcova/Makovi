@@ -93,7 +93,7 @@ impl Ast<'_> {
                     writeln!(f)?;
                 }
             }
-            Expr::Integer(..) | Expr::Variable(..) => {
+            Expr::Bool(..) | Expr::Integer(..) | Expr::Variable(..) => {
                 writeln!(f, "{prefix}{:?}", self[expr])?;
             }
             Expr::Operator(operator, lhs, rhs) => {

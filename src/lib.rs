@@ -32,6 +32,15 @@ impl<In, Out> Default for MakoviJit<In, Out> {
 }
 
 impl<In, Out> MakoviJit<In, Out> {
+    pub fn write_ast(&mut self, code: &str) -> Result<String, String> {
+        Ok(format!("{}", self.parser.parse(code)?))
+    }
+
+    pub fn write_ir(&mut self, code: &str) -> Result<String, String> {
+        let ast = self.parser.parse(code)?;
+        self.jit.write_ir(&ast)
+    }
+
     pub fn load_code(&mut self, code: &str) -> Result<(), String> {
         let ast = self.parser.parse(code)?;
         let ptr = self.jit.compile(&ast)?;

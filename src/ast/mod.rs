@@ -11,6 +11,7 @@ use std::{
 #[derive(Debug, Copy, Clone)]
 pub enum Expr<'a> {
     Integer(&'a str),
+    Bool(bool),
     Variable(&'a str),
     VariableDefinition(&'a str),
     Return(ExprPtr),

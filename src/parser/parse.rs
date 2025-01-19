@@ -294,6 +294,14 @@ impl<'a> AstParser<'a> {
                 self.lexer.next();
                 Some(self.ast.push(Expr::Integer(token.slice)))
             }
+            True => {
+                self.lexer.next();
+                Some(self.ast.push(Expr::Bool(true)))
+            }
+            False => {
+                self.lexer.next();
+                Some(self.ast.push(Expr::Bool(false)))
+            }
             BracketOpen => {
                 self.lexer.next();
                 let expr = self.expr()?;

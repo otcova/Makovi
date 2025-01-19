@@ -32,6 +32,11 @@ impl Default for Jit {
 
 impl Jit {
     /// Compile a string in the toy language into machine code.
+    pub fn write_ir(&mut self, ast: &Ast) -> Result<String, String> {
+        self.code.write_ir(ast)
+    }
+
+    /// Compile a string in the toy language into machine code.
     pub fn compile<'a>(&mut self, ast: &'a Ast<'a>) -> Result<*const u8, String> {
         let id = self.code.load(ast)?;
 

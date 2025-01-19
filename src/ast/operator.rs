@@ -9,30 +9,29 @@ pub enum Operator {
     Div,
     Mod,
 
-    // Boolean
+    // Comparison
     Eq,
     Ne,
     Lt,
     Le,
     Gt,
     Ge,
+
+    // Boolean
+    And,
+    Or,
+    XOr,
 }
 
 impl Operator {
     pub fn priority(&self) -> u8 {
         use Operator::*;
         match self {
-            Mul => 3,
-            Div => 3,
-            Add => 2,
-            Sub => 2,
-            Mod => 1,
-            Eq => 0,
-            Ne => 0,
-            Lt => 0,
-            Le => 0,
-            Gt => 0,
-            Ge => 0,
+            Mul | Div | Mod => 4,
+            Add | Sub => 3,
+            Eq | Ne | Lt | Le | Gt | Ge => 2,
+            And => 1,
+            Or | XOr => 0,
         }
     }
 }
@@ -51,6 +50,9 @@ impl Display for Operator {
             Operator::Le => write!(f, "<="),
             Operator::Gt => write!(f, ">"),
             Operator::Ge => write!(f, ">="),
+            Operator::And => write!(f, "and"),
+            Operator::Or => write!(f, "or"),
+            Operator::XOr => write!(f, "xor"),
         }
     }
 }

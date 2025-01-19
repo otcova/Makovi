@@ -23,7 +23,9 @@ function smallest_factor("number")
 │ (Statement) factor = Integer("7")
 │ (Statement) while lhs < rhs
 │ │ (lhs) Variable("factor")
-│ │ (rhs) Variable("number")
+│ │ (rhs) lhs / rhs
+│ │ │ (lhs) Variable("number")
+│ │ │ (rhs) Integer("5")
 │ then
 │ │ (Statement) if lhs == rhs
 │ │ │ (lhs) lhs mod rhs

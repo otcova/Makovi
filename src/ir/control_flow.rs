@@ -12,6 +12,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
     fn translate_expr(&mut self, expr: Expr<'a>) -> ExprValue {
         match expr {
             Expr::Integer(literal) => self.integer(literal),
+            Expr::Bool(bool) => self.bool(bool),
             Expr::Variable(name) => self.variable(name),
             Expr::Assign(name, value) => {
                 let value = self.translate(value);
@@ -20,19 +21,7 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             Expr::Operator(operator, lhs, rhs) => {
                 let lhs = self.translate(lhs);
                 let rhs = self.translate(rhs);
-                match operator {
-                    Operator::Eq => self.eq(lhs, rhs),
-                    Operator::Ne => self.ne(lhs, rhs),
-                    Operator::Lt => self.lt(lhs, rhs),
-                    Operator::Le => self.le(lhs, rhs),
-                    Operator::Gt => self.gt(lhs, rhs),
-                    Operator::Ge => self.ge(lhs, rhs),
-                    Operator::Add => self.add(lhs, rhs),
-                    Operator::Sub => self.sub(lhs, rhs),
-                    Operator::Mul => self.mul(lhs, rhs),
-                    Operator::Div => self.div(lhs, rhs),
-                    Operator::Mod => self.module(lhs, rhs),
-                }
+                self.operator(operator, lhs, rhs)
             }
             Expr::IfElse {
                 condition,

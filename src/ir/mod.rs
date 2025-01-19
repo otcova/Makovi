@@ -23,15 +23,23 @@ struct FunctionTranslator<'ast, 'build, M: Module> {
 
 #[derive(Debug, Clone, PartialEq)]
 enum ExprValue {
-    Primitive(Value),
+    I64(Value),
+    Bool(Value),
     Null,
     Unreachable,
 }
 
 impl ExprValue {
-    pub fn expect_primitive(self) -> Value {
+    pub fn expect_int(self) -> Value {
         match &self {
-            Self::Primitive(value) => *value,
+            Self::I64(value) => *value,
+            _ => panic!("Expected int, found: {:?}", &self),
+        }
+    }
+
+    pub fn expect_bool(self) -> Value {
+        match &self {
+            Self::Bool(value) => *value,
             _ => panic!("Expected Primitive Value, found: {:?}", &self),
         }
     }
@@ -40,7 +48,7 @@ impl ExprValue {
 impl From<Option<Value>> for ExprValue {
     fn from(value: Option<Value>) -> Self {
         match value {
-            Some(v) => Self::Primitive(v),
+            Some(v) => Self::I64(v),
             None => Self::Null,
         }
     }
@@ -55,7 +63,6 @@ impl<M: Module> CodeIr<M> {
         }
     }
 
-    #[cfg(test)]
     pub fn write_ir(&mut self, ast: &Ast) -> Result<String, String> {
         self.translate_function(ast, ast.root().unwrap())?;
 
@@ -172,7 +179,7 @@ mod tests {
 
         let ir = &code.write_ir(&ast).unwrap();
 
-        let expected = &load_src(test_name, ".ir");
+        let expected = &load_src(test_name, ".ir.run");
         assert_source_eq(expected, ir);
 
         // TODO: b.iter(|| code.load(black_box(&ast)).unwrap());

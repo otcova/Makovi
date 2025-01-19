@@ -23,7 +23,7 @@ macro_rules! gen_tests {
         #[bench]
         fn $test_name(b: &mut test::Bencher) {
             let name = stringify!($test_name);
-            let code = &load_src(name, "");
+            let code = &load_src(name, ".rb");
             $generic_test(b, code, name, ($($params),*), $result);
         }
         )*
@@ -33,7 +33,7 @@ macro_rules! gen_tests {
 pub(crate) use gen_tests;
 
 pub fn load_src(name: &str, sufix: &str) -> String {
-    let path = &format!("code_samples/{name}{sufix}.run");
+    let path = &format!("code_samples/{name}{sufix}");
     std::fs::read_to_string(path).unwrap_or_else(|_| panic!("Missing file: {}", path))
 }
 
