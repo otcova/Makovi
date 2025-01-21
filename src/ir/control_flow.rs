@@ -26,9 +26,13 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             } => {
                 let lhs = self.translate(lhs);
                 let rhs = self.translate(rhs);
-                let mut result = self.operator(operator, lhs, rhs);
+                let mut prev_result = self.operator(operator, lhs, rhs);
 
+                let is_comparison = operator.is_comparison();
+
+                let mut lhs = rhs;
                 let mut next_operation = next;
+
                 while next_operation != NULL_EXPR_PTR {
                     let Expr::Operation {
                         operator,
@@ -40,12 +44,19 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                     };
 
                     let rhs = self.translate(rhs);
-                    result = self.operator(operator, result, rhs);
 
+                    if is_comparison {
+                        let this_comparison = self.operator(operator, lhs, rhs);
+                        prev_result = self.operator(Operator::And, prev_result, this_comparison);
+                    } else {
+                        prev_result = self.operator(operator, prev_result, rhs);
+                    }
+
+                    lhs = rhs;
                     next_operation = next;
                 }
 
-                result
+                prev_result
             }
             Expr::IfElse {
                 condition,

@@ -1,12 +1,10 @@
 function multiply("a", "b")
 │ (Statement) if lhs or rhs
-│ │ (lhs) lhs and rhs
-│ │ │ (lhs) lhs >= rhs
-│ │ │ │ (lhs) Variable("b")
-│ │ │ │ (rhs) Integer("32")
-│ │ │ (rhs) lhs < rhs
-│ │ │ │ (lhs) Variable("a")
-│ │ │ │ (rhs) Variable("b")
+│ │ (lhs) lhs <= rhs next
+│ │ │ (lhs) Integer("32")
+│ │ │ (rhs) Variable("b")
+│ │ │ (next) > rhs
+│ │ │ │ (rhs) Variable("a")
 │ │ (rhs) Bool(false)
 │ then
 │ │ (Statement) return multiply(...)
@@ -32,9 +30,11 @@ function multiply("a", "b")
 │ │ (Statement) iterations = lhs - rhs
 │ │ │ (lhs) Variable("iterations")
 │ │ │ (rhs) Integer("3")
-│ (Statement) while lhs >= rhs
+│ (Statement) while lhs >= rhs next
 │ │ (lhs) Variable("iterations")
 │ │ (rhs) Integer("1")
+│ │ (next) != rhs
+│ │ │ (rhs) Integer("0")
 │ then
 │ │ (Statement) result = lhs + rhs
 │ │ │ (lhs) Variable("result")

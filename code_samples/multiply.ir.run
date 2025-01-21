@@ -4,10 +4,10 @@ function u0:0(i64, i64) -> i64 system_v {
 
 block0(v0: i64, v1: i64):
     v14 -> v0
-    v28 -> v0
+    v31 -> v0
     v2 = iconst.i64 32
-    v3 = icmp sge v1, v2  ; v2 = 32
-    v4 = icmp slt v0, v1
+    v3 = icmp sle v2, v1  ; v2 = 32
+    v4 = icmp sgt v1, v0
     v5 = band v3, v4
     v6 = iconst.i8 0
     v7 = bor v5, v6  ; v6 = 0
@@ -41,18 +41,21 @@ block5:
     v23 = iconst.i64 0
     jump block6(v10, v13)
 
-block6(v24: i64, v27: i64):
+block6(v24: i64, v30: i64):
     v25 = iconst.i64 1
     v26 = icmp sge v24, v25  ; v25 = 1
-    brif v26, block7, block8
+    v27 = iconst.i64 0
+    v28 = icmp ne v25, v27  ; v25 = 1, v27 = 0
+    v29 = band v26, v28
+    brif v29, block7, block8
 
 block7:
-    v29 = iadd.i64 v27, v28
-    v30 = iconst.i64 1
-    v31 = isub.i64 v24, v30  ; v30 = 1
-    jump block6(v31, v29)
+    v32 = iadd.i64 v30, v31
+    v33 = iconst.i64 1
+    v34 = isub.i64 v24, v33  ; v33 = 1
+    jump block6(v34, v32)
 
 block8:
-    v32 = iconst.i64 0
-    return v27
+    v35 = iconst.i64 0
+    return v30
 }

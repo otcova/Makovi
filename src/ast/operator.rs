@@ -35,6 +35,11 @@ impl Operator {
             Or | XOr => 0,
         }
     }
+
+    pub fn is_comparison(&self) -> bool {
+        use Operator::*;
+        matches!(self, Eq | Lt | Le | Gt | Ge)
+    }
 }
 
 impl Display for Operator {

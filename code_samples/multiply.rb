@@ -1,5 +1,5 @@
 function multiply(a, b)
-    if b >= 32 and a < b or false
+    if 32 <= b > a or false
         return multiply(b, a)
 
     result = 0
@@ -9,7 +9,7 @@ function multiply(a, b)
         result += a - a + 2 * a + a
         iterations -= 3
 
-    while iterations >= 1
+    while iterations >= 1 != 0
         result += a
         iterations -= 1
 

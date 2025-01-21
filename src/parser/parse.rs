@@ -300,12 +300,13 @@ impl<'a> AstParser<'a> {
             };
 
             if operator.priority() != priority {
-                // The expression continues
+                // The expression continues but with lower priority than min
                 if operator.priority() < min_priority {
                     return Ok(Some(head_expr));
                 }
 
-                return self.expr_operation(lhs, min_priority);
+                // The expression continues with lower priority, but >= than min
+                return self.expr_operation(head_expr, min_priority);
             }
 
             // Now we know that the expression continues

@@ -21,7 +21,7 @@ struct FunctionTranslator<'ast, 'build, M: Module> {
     ast: &'ast Ast<'ast>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum ExprValue {
     I64(Value),
     Bool(Value),
