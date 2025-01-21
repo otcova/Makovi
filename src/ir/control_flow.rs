@@ -18,10 +18,34 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
                 let value = self.translate(value);
                 self.assign(name, value)
             }
-            Expr::Operator(operator, lhs, rhs) => {
+            Expr::HeadOperation {
+                lhs,
+                operator,
+                rhs,
+                next,
+            } => {
                 let lhs = self.translate(lhs);
                 let rhs = self.translate(rhs);
-                self.operator(operator, lhs, rhs)
+                let mut result = self.operator(operator, lhs, rhs);
+
+                let mut next_operation = next;
+                while next_operation != NULL_EXPR_PTR {
+                    let Expr::Operation {
+                        operator,
+                        rhs,
+                        next,
+                    } = self.ast[next_operation]
+                    else {
+                        unreachable!("HeadOperation.next should only point to Operation or NULL");
+                    };
+
+                    let rhs = self.translate(rhs);
+                    result = self.operator(operator, result, rhs);
+
+                    next_operation = next;
+                }
+
+                result
             }
             Expr::IfElse {
                 condition,
@@ -67,7 +91,8 @@ impl<'a, M: Module> FunctionTranslator<'a, '_, M> {
             Expr::Function { .. } => {
                 todo!()
             }
-            Expr::VariableDefinition(..)
+            Expr::Operation { .. }
+            | Expr::VariableDefinition(..)
             | Expr::Parameters(..)
             | Expr::ParametersDefinition(..) => {
                 unreachable!()

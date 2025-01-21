@@ -7,6 +7,7 @@ macro_rules! tokens {
         #[derive(Logos, Debug, PartialEq, Eq, Copy, Clone)]
         #[logos(skip r" +")]
         #[logos(extras = LexerContext)]
+        #[repr(usize)]
         pub enum Token {
             $(
                 $(#[regex($regex)])?

@@ -16,20 +16,22 @@ function multiply("a", "b")
 │ (Statement) iterations = Variable("b")
 │ (Statement) while lhs >= rhs
 │ │ (lhs) Variable("iterations")
-│ │ (rhs) Integer("4")
+│ │ (rhs) Integer("3")
 │ then
 │ │ (Statement) result = lhs + rhs
 │ │ │ (lhs) Variable("result")
-│ │ │ (rhs) lhs + rhs
-│ │ │ │ (lhs) lhs + rhs
-│ │ │ │ │ (lhs) Variable("a")
+│ │ │ (rhs) lhs - rhs next
+│ │ │ │ (lhs) Variable("a")
+│ │ │ │ (rhs) Variable("a")
+│ │ │ │ (next) + rhs next
 │ │ │ │ │ (rhs) lhs * rhs
 │ │ │ │ │ │ (lhs) Integer("2")
 │ │ │ │ │ │ (rhs) Variable("a")
-│ │ │ │ (rhs) Variable("a")
+│ │ │ │ │ (next) + rhs
+│ │ │ │ │ │ (rhs) Variable("a")
 │ │ (Statement) iterations = lhs - rhs
 │ │ │ (lhs) Variable("iterations")
-│ │ │ (rhs) Integer("4")
+│ │ │ (rhs) Integer("3")
 │ (Statement) while lhs >= rhs
 │ │ (lhs) Variable("iterations")
 │ │ (rhs) Integer("1")

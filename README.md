@@ -16,21 +16,21 @@ Learning, curiosity, research and personal use
 Variable definition and assignment
 ```c
 coins = 0
-interests = 0.5 * (x+y)
+average = (x + y) / 2.0
 title = "Makovi 101"
 ```
 The compiler infers the type it based on the value and other factors
 to squeeze runtime performance, but it can be set explicitly.
 ```c
 coins: int = 0
-average: float = 0.5 * (x+y)
+average: float = (x + y) / 2.0
 title: string = "Makovi 101"
 ```
 
 One can even specify more specific types
 ```c
-coins: u8 = 0
-average: f64 = 0.5 * (x+y)
+coins: i64 = 0
+average: f64 = (x + y) / 2.0
 title: u8[] = "Makovi 101"
 ```
 
@@ -54,9 +54,9 @@ samples: int[5] = [4, 2, 6, 3, 5]
 samples.push(9) // this gives ERROR
 ```
 
-String literals are powerful
+String literals are powerful:
 - Embed code inside a string with `{code}`
-- Alternatively, define the string as raw to not look of `{code}`
+- Alternatively, define the string as raw to interpret `{` as a normal character.
 - Use 3 or more quotes to write quotes inside the string
 - Multiline indented strings
 ```javascript

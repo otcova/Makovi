@@ -96,12 +96,44 @@ impl Ast<'_> {
             Expr::Bool(..) | Expr::Integer(..) | Expr::Variable(..) => {
                 writeln!(f, "{prefix}{:?}", self[expr])?;
             }
-            Expr::Operator(operator, lhs, rhs) => {
-                writeln!(f, "{prefix}lhs {operator} rhs")?;
-                write!(f, "{ind}(lhs) ")?;
-                self.print_ast(f, lhs, indent + 1, false)?;
-                write!(f, "{ind}(rhs) ")?;
-                self.print_ast(f, rhs, indent + 1, false)?;
+            Expr::HeadOperation {
+                lhs,
+                operator,
+                rhs,
+                next,
+            } => {
+                if next == NULL_EXPR_PTR {
+                    writeln!(f, "{prefix}lhs {operator} rhs")?;
+                    write!(f, "{ind}(lhs) ")?;
+                    self.print_ast(f, lhs, indent + 1, false)?;
+                    write!(f, "{ind}(rhs) ")?;
+                    self.print_ast(f, rhs, indent + 1, false)?;
+                } else {
+                    writeln!(f, "{prefix}lhs {operator} rhs next")?;
+                    write!(f, "{ind}(lhs) ")?;
+                    self.print_ast(f, lhs, indent + 1, false)?;
+                    write!(f, "{ind}(rhs) ")?;
+                    self.print_ast(f, rhs, indent + 1, false)?;
+                    write!(f, "{ind}(next) ")?;
+                    self.print_ast(f, next, indent + 1, false)?;
+                }
+            }
+            Expr::Operation {
+                operator,
+                rhs,
+                next,
+            } => {
+                if next == NULL_EXPR_PTR {
+                    writeln!(f, "{prefix}{operator} rhs")?;
+                    write!(f, "{ind}(rhs) ")?;
+                    self.print_ast(f, rhs, indent + 1, false)?;
+                } else {
+                    writeln!(f, "{prefix}{operator} rhs next")?;
+                    write!(f, "{ind}(rhs) ")?;
+                    self.print_ast(f, rhs, indent + 1, false)?;
+                    write!(f, "{ind}(next) ")?;
+                    self.print_ast(f, next, indent + 1, false)?;
+                }
             }
         };
 

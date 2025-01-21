@@ -1,10 +1,10 @@
 macro_rules! match_token {
-    ( match $token:ident { $($pat:pat => $then:expr$(,)?)* }) => {
+    ( match $token:ident { $($(#if $match:ident)? $($pat:pat)? => $then:expr$(,)?)* }) => {
         {
         use Token::*;
         let $token = $token;
         match $token.expect_token()? {
-            $($pat => $then,)*
+            $($(token if token == $match)? $($pat)? => $then,)*
 
             #[allow(unreachable_patterns)]
             found => {
@@ -17,10 +17,10 @@ macro_rules! match_token {
         }
     };
 
-    ( match $self:ident.$token:ident.$fn:ident() { $($pat:pat => $then:expr$(,)?)* }) => {
+    ( match $self:ident.$token:ident.$fn:ident() { $($(#if $match:ident)? $($pat:pat)? => $then:expr$(,)?)* }) => {
         {
         let token = $self.$token.$fn();
-        match_token! { match token { $($pat => $then,)* }}
+        match_token! { match token { $($(#if $match)? $($pat)? => $then,)* }}
         }
     };
 }

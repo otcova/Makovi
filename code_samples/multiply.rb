@@ -5,9 +5,9 @@ function multiply(a, b)
     result = 0
     iterations = b
 
-    while iterations >= 4
-        result += a + 2 * a + a
-        iterations -= 4
+    while iterations >= 3
+        result += a - a + 2 * a + a
+        iterations -= 3
 
     while iterations >= 1
         result += a

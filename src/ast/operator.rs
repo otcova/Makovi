@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[repr(usize)]
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Operator {
     // Arithmetic

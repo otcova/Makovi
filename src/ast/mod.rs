@@ -16,7 +16,26 @@ pub enum Expr<'a> {
     VariableDefinition(&'a str),
     Return(ExprPtr),
     Assign(&'a str, ExprPtr),
-    Operator(Operator, ExprPtr, ExprPtr),
+
+    /// # Example
+    /// This expression
+    /// `1 < 2 + 3 <= 4 + 5 + 6`
+    /// Is represented with the following
+    /// `1 < (2 + 3) -> <= (4 + 5 -> + 6)`
+    /// Which is equivalent to
+    /// `Head[1 < Head[2 + 3 -> null]  ->  Op(<= Head[4 + 5  ->  Op(+ 6 -> null)]  ->  null)]`
+    HeadOperation {
+        lhs: ExprPtr,
+        operator: Operator,
+        rhs: ExprPtr,
+        next: ExprPtr,
+    },
+    /// See `HeadOperation` variant
+    Operation {
+        operator: Operator,
+        rhs: ExprPtr,
+        next: ExprPtr,
+    },
     IfElse {
         condition: ExprPtr,
         then_body: ExprPtr,
@@ -48,7 +67,7 @@ pub struct Ast<'c> {
     nodes: Vec<Expr<'c>>,
 }
 
-pub type ExprPtr = u32;
+pub type ExprPtr = usize;
 pub const NULL_EXPR_PTR: ExprPtr = ExprPtr::MAX;
 
 struct AstList<'a> {
@@ -135,12 +154,14 @@ impl<'c> Ast<'c> {
 impl<'c> Index<ExprPtr> for Ast<'c> {
     type Output = Expr<'c>;
     fn index(&self, index: ExprPtr) -> &Self::Output {
+        #[allow(clippy::unnecessary_cast)]
         &self.nodes[index as usize]
     }
 }
 
 impl IndexMut<ExprPtr> for Ast<'_> {
     fn index_mut(&mut self, index: ExprPtr) -> &mut Self::Output {
+        #[allow(clippy::unnecessary_cast)]
         &mut self.nodes[index as usize]
     }
 }
