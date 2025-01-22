@@ -1,3 +1,5 @@
+//! Converts the syntax tree into a lower-level, language-independent format.
+
 mod control_flow;
 mod translations;
 

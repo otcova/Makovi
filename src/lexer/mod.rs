@@ -1,3 +1,5 @@
+//! Breaks the source code into tokens (keywords, identifiers, literals).
+
 mod token_match_macros;
 mod tokens;
 

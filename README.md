@@ -7,9 +7,12 @@ The current implementation is not complete and might never be.
 Learning, curiosity, research and personal use
 
 ## Goals
-- High performance (JIT / AOT)
-- Frictionless (consistent/simple/minimal syntax, quick/easy to read/think)
+Ordered descending priority, here are the goals
+
 - Sandboxed scripting language
+- Frictionless (consistent/simple/minimal syntax, quick/easy to read/think)
+- Runtime performance (JIT / AOT)
+- Compile time performance
 
 # Language Features
 

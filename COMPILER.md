@@ -1,9 +1,9 @@
 
 # Execution flow
 
--------|-------------------
-Lexer  | `str` -> `Iter<Token>`
-Parser | `Iter<Token>` -> `Ast`
-Ir     | `Ast` -> `Ir`
-Jit    | `Ir` -> `Executable`
-
+| Name   | Generates              |
+|--------|------------------------|
+| Lexer  | `Iter<Token>`          |
+| Parser | `Ast`                  |
+| Ir     | `Ir`                   |
+| Jit    | `Executable`           |

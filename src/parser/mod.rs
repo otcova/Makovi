@@ -1,3 +1,5 @@
+//! Parses tokens into a syntax tree based on grammar rules.
+
 mod parse;
 
 use crate::error::*;
