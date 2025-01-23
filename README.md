@@ -14,6 +14,9 @@ Ordered descending priority, here are the goals
 - Runtime performance (JIT / AOT)
 - Compile time performance
 
+## Inner Workings
+See [Inner Workings](/Inner_Workings.md) for more info
+
 # Language Features
 
 Variable definition and assignment
