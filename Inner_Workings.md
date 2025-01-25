@@ -26,7 +26,7 @@ The purpose is to have a simple list of statements to be able to analyze without
 This way, the compiler is able to recover easily when there are syntax errors.
 
 The statement stage will do all checks that do not need any kind of scope context.
-Specifically, it mostly does syntax and semantic Analysis.
+Specifically, it mostly does Syntax Analysis.
 
 A statement is considered a line of code. But sometimes this gets more complicated.
 Each code block represents a single statement

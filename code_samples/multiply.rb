@@ -1,4 +1,4 @@
-function multiply(a, b)
+let multiply = fn(a, b)
     if 32 <= b > a or false
         return multiply(b, a)
 

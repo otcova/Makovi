@@ -1,10 +1,12 @@
-#![feature(vec_into_raw_parts)]
+#![feature(vec_into_raw_parts, never_type)]
 #![cfg_attr(test, feature(test))]
+#![allow(unused)]
 
 #[cfg(test)]
 extern crate test;
 
 mod ast;
+mod environment;
 mod error;
 mod ir;
 mod jit;
@@ -16,7 +18,7 @@ use jit::*;
 use parser::*;
 
 pub struct MakoviJit<In, Out> {
-    parser: Parser,
+    parser: ParserContext,
     jit: Jit,
     fn_ptr: fn(In) -> Out,
 }
@@ -25,7 +27,7 @@ impl<In, Out> Default for MakoviJit<In, Out> {
     fn default() -> Self {
         MakoviJit {
             jit: Jit::default(),
-            parser: Parser::default(),
+            parser: ParserContext::default(),
             fn_ptr: |_| panic!("Function not loaded!"),
         }
     }
@@ -33,16 +35,16 @@ impl<In, Out> Default for MakoviJit<In, Out> {
 
 impl<In, Out> MakoviJit<In, Out> {
     pub fn write_ast(&mut self, code: &str) -> Result<String, String> {
-        Ok(format!("{}", self.parser.parse(code)?))
+        Ok(format!("{}", self.parser.new_parser(code).parse()?))
     }
 
     pub fn write_ir(&mut self, code: &str) -> Result<String, String> {
-        let ast = self.parser.parse(code)?;
+        let ast = self.parser.new_parser(code).parse()?;
         self.jit.write_ir(&ast)
     }
 
     pub fn load_code(&mut self, code: &str) -> Result<(), String> {
-        let ast = self.parser.parse(code)?;
+        let ast = self.parser.new_parser(code).parse()?;
         let ptr = self.jit.compile(&ast)?;
 
         unsafe {

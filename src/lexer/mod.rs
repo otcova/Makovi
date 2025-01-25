@@ -5,47 +5,17 @@ mod tokens;
 
 use crate::error::*;
 use logos::{Logos, Span};
-pub(crate) use token_match_macros::*;
 pub use tokens::*;
 
 pub struct Lexer<'a> {
     lexer: logos::Lexer<'a, Token>,
-    token: TokenResult<'a>,
 }
 
-#[derive(Clone, Copy)]
 pub struct TokenResult<'a> {
-    pub token: Option<Result<Token, ()>>,
+    pub token: Option<Token>,
     pub slice: &'a str,
     pub span: LineSpan,
     indent: usize,
-}
-
-impl TokenResult<'_> {
-    pub fn expect_token(self) -> Result<Token, CompilationError> {
-        match self.token {
-            Some(Ok(token)) => Ok(token),
-            Some(Err(())) => Err(CompilationError {
-                message: format!("Unknown token {}", self.slice),
-                span: self.span,
-            }),
-            None => Err(CompilationError {
-                message: "Expected a token but reached end of file".to_owned(),
-                span: self.span,
-            }),
-        }
-    }
-
-    pub fn expect(self, token: Token) -> Result<Self, CompilationError> {
-        if token == self.expect_token()? {
-            Ok(self)
-        } else {
-            Err(CompilationError {
-                message: format!("Expected token '{token:?}' but found '{}'", self.slice),
-                span: self.span,
-            })
-        }
-    }
 }
 
 impl<'a> Lexer<'a> {
@@ -57,41 +27,37 @@ impl<'a> Lexer<'a> {
             indent: source.len() - trimed_source.len(),
         };
 
-        let mut lexer = Self {
-            token: TokenResult {
-                token: None,
-                slice: "",
-                span: LineSpan::default(),
-                indent: 0,
-            },
+        Self {
             lexer: Token::lexer_with_extras(trimed_source, context),
-        };
-        lexer.next();
-        lexer
+        }
     }
 
-    pub fn next(&mut self) -> TokenResult<'a> {
+    pub fn next(&mut self) -> Result<TokenResult<'a>, CompilationError> {
         let token = self.lexer.next();
         let line_span = self.lexer.extras.span(self.lexer.span());
         let slice = self.lexer.slice();
 
-        if token == Some(Ok(Token::NewLine)) {
+        let token = match token {
+            Some(Ok(token)) => Some(token),
+            Some(Err(())) => {
+                return Err(CompilationError {
+                    span: line_span,
+                    message: format!("Unknown token {slice}"),
+                })
+            }
+            None => None,
+        };
+
+        if token == Some(Token::NewLine) {
             self.lexer.extras.new_line(self.lexer.span());
         }
 
-        std::mem::replace(
-            &mut self.token,
-            TokenResult {
-                token,
-                slice,
-                span: line_span,
-                indent: self.lexer.extras.indent,
-            },
-        )
-    }
-
-    pub fn peek(&self) -> TokenResult<'a> {
-        self.token
+        Ok(TokenResult {
+            token,
+            slice,
+            span: line_span,
+            indent: self.lexer.extras.indent,
+        })
     }
 }
 
@@ -124,6 +90,18 @@ impl LexerContext {
 }
 
 impl TokenResult<'_> {
+    pub fn line_span(&self) -> LineSpan {
+        LineSpan {
+            start: LineColumnNumber {
+                line: self.span.start.line,
+                column: 1,
+            },
+            end: LineColumnNumber {
+                line: self.span.start.line,
+                column: 1,
+            },
+        }
+    }
     pub fn nesting_span(&self) -> LineSpan {
         LineSpan {
             start: LineColumnNumber {

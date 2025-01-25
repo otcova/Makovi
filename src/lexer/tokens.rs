@@ -15,11 +15,23 @@ macro_rules! tokens {
                 $name,
             )*
         }
+
+        impl Token {
+            pub fn get_str(&self) -> &'static str {
+                match self {
+                    $(
+                        Token::$name =>
+                            $(if true { stringify!($name) } else { $regex },)?
+                            $($token,)?
+                    )*
+                }
+            }
+        }
     };
 }
 
 tokens! {
-    Function "function"
+    Function "fn"
     Return "return"
 
     Comma ","
@@ -30,6 +42,8 @@ tokens! {
     If "if"
     Else "else"
     While "while"
+
+    Let "let"
 
     Assign "="
     AddAssign "+="

@@ -3,6 +3,7 @@ mod operator;
 mod statement;
 
 pub use operator::*;
+pub use statement::*;
 
 use std::{
     mem,

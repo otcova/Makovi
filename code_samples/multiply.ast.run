@@ -1,4 +1,4 @@
-function multiply("a", "b")
+(Statement) function multiply("a", "b")
 │ (Statement) if lhs or rhs
 │ │ (lhs) lhs <= rhs next
 │ │ │ (lhs) Integer("32")

@@ -1,4 +1,4 @@
-function smallest_factor(number)
+let smallest_factor = fn(number)
     if number mod 2 == 0
         return 2
     else if number mod 3 == 0

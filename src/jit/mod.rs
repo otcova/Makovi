@@ -72,8 +72,8 @@ mod run {
         In: Clone,
         Out: Debug + PartialEq,
     {
-        let mut parser = Parser::default();
-        let ast = parser.parse(code).unwrap();
+        let mut parser = ParserContext::default();
+        let ast = parser.new_parser(code).parse().unwrap();
 
         let mut jit = Jit::default();
         let ptr = jit.compile(&ast).unwrap();

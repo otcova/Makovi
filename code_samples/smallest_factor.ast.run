@@ -1,4 +1,4 @@
-function smallest_factor("number")
+(Statement) function smallest_factor("number")
 │ (Statement) if lhs == rhs
 │ │ (lhs) lhs mod rhs
 │ │ │ (lhs) Variable("number")

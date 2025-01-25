@@ -89,11 +89,16 @@ impl<M: Module> CodeIr<M> {
         function: Expr<'a>,
     ) -> Result<FuncId, String> {
         let int = types::I64;
+
+        let Expr::Statements(function, NULL_EXPR_PTR) = function else {
+            unreachable!("Expected a statement");
+        };
+
         let Expr::Function {
             name,
             parameters,
             body,
-        } = function
+        } = ast[function]
         else {
             unreachable!("Expected a function");
         };
@@ -163,8 +168,8 @@ mod tests {
     gen_tests!(generic_test(bench, code, test_name));
 
     fn generic_test(_b: &mut Bencher, code: &str, test_name: &str) {
-        let mut parser = Parser::default();
-        let ast = parser.parse(code).unwrap();
+        let mut parser = ParserContext::default();
+        let ast = parser.new_parser(code).parse().unwrap();
 
         let flags_builder = settings::builder();
         // flags_builder.set("opt_level", "speed").unwrap();
