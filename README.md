@@ -15,7 +15,7 @@ Ordered descending priority, here are the goals
 - Compile time performance
 
 ## Inner Workings
-See [Inner Workings](/Inner_Workings.md) for more info
+See [Inner Workings](/Inner_Workings.md) for more info.
 
 # Language Features
 
@@ -87,31 +87,39 @@ For example, C++ lambda function syntax is different from its class method synta
 which is itself different from its global function syntax.
 
 
-The function syntax in Makovi is consistent, and always has the form of
+The function syntax in Makovi have the following form:
 ```rust
-fn (a, b)
+fn add(a, b)
     return a + b
 
+```
+```rust
 // One liners can also be written like this
-fn (a, b) a + b
+fn add(a, b) a + b
 ```
 
-A function behaves as any other value.
-```rust
-let greet = fn (maybe_human)
-    print("Hello {maybe_human}!")
+The defined `add` function, will live in all it's scope.
+Meaning that we don't need to care about the order of the defined functions.
+Note that in the following correct example,
+the function add is defined after it's beeing used.
 
+```rust
+print("1 + 2 = {add(1, 2)}")
+fn add(a, b) a + b
+```
+
+The lambdas in makovi are functions without a name.
+Lambdas have the exact same properties as a normal function,
+except that they don't have a name that occupies all the scope.
+```rust
 [1, 2, 3].map(fn(x) x + 1) // -> [2, 3, 4]
 ```
-
-This way lambdas and functions are alike in shape and form.
-
 
 ## Generics / Templates / Polymorphic procedures
 `distance` is a generic function that accepts any two inputs
 that have x and y components that can be subtracted
 ```rust
-let distance = fn(point_a, point_b)
+fn distance(point_a, point_b)
     let x = point_a.x - point_b.x
     let y = point_a.y - point_a.y
     return sqrt(x^2 + y^2)
@@ -120,22 +128,12 @@ distance({x = 2, y = 4}, {x = 2, y = 6}) // int 2
 distance({x = 2., y = 4.}, {x = 2., y = 6.2}) // 2.2
 ```
 
-## Lambdas
-A lambda is not different from a simple function
-
-data = [1, 2, 3, 4, 5].filter(fn(x) x > 2)
-```
-
-This reduces friction compared to other languages
-where lambda function syntax is different from its class method syntax,
-which is itself different from its global function syntax.
-
 ## Structs / Classes / Type definitions
 `Position` is a generic structure with an `add` method.
 ```rust
 let Position = type { x, y }
 
-Position.add = fn(rhs: Position)
+fn Position.add (rhs: Position)
     return Position { x = x + rhs.x, y = y + rhs.y }
 
 let a = Position { x = 1, y = 2 }
@@ -213,7 +211,7 @@ By default, all arguments are passed by copy. This prevents the programmer from 
 the function will change something. Also, passing data as a copy is usually very efficient since
 a COW mechanism is in place.
 ```rust
-let increment = fn(x)
+fn increment(x)
     x += 1
     print("x = {x}")
 
@@ -234,5 +232,5 @@ print("Value = {value}")
 
 // This prints:
 // x = 1
-// value = 0
+// value = 1
 ```

@@ -1,11 +1,21 @@
+# Common modules
+This are data structures and utilities used across layers
 
-# Execution flow
-| Module   | Generates              |
-|--------|------------------------|
-| Lexer  | `Iter<Token>`          |
-| Parser | `Ast`                  |
-| Ir     | `Ir`                   |
-| Jit    | `Executable`           |
+- Ast: Definition of the abstract syntax tree
+- Error: Compilation error types
+
+# Compilation
+Compilation is the process of transforming source code into an executable.
+Here are the steps and transformations done to the source code.
+```
+Source 1.-> Tokens 2.-> Statements 3.-> AST 4.-> IR 5.-> executable
+```
+Responsible modules
+1. Lexer
+1. Parser stage 1
+1. Parser stage 2
+1. Ir
+1. Cranelift crate
 
 ## Lexer
 A one token lookahead mainly implemented with crate::logos which
@@ -63,3 +73,44 @@ To do so, it has to:
 - Track variables lifetimes (Used to optimize. Preventing inneceray copies or references)
 - Type Inference
 
+
+# Runtime
+The runtime is all the extra code that will run with the compiled source.
+The built in runtime is the responsible to provide the implementation of the standard library.
+
+The runtime can also be extended with additional customizable modules (see [next section](#runtime-modules)).
+Since runtime modules provide extra types and functions,
+the compiler needs to know in advance in which runtime the code is supposed to run.
+
+Here is an example of who to compile and run code using the `DesktopRuntime`.
+
+```rust
+// Define the runtime
+type DesktopRuntime = BaseRuntime<DesktopModule>;
+
+// Compile targeting the runtime
+let compiler = Compiler::default();
+let executable = compiler.compile::<DesktopRuntime>(source_code);
+
+// Instantiate the runtime and run the code
+let runtime = DesktopRuntime::default();
+runtime.run(executable);
+```
+
+> [!Note]
+> The `DesktopModule` is a collection of [runtime modules](#runtime-modules) that gives access to
+> the common desktop environments like the file system and networking.
+
+
+## Runtime modules
+A `RuntimeModule` is a group of functions and types that extends the Makovi's built-ins.
+They are the way to let the scripting language interact with the environment (desktop / app / game).
+
+The built in runtime has the most basic functionality which is always present in the language.
+This includes basic functions and types like rounding and arrays.
+While a `RuntimeModule` is an opt in customizable extension.
+
+> [!Note]
+> The built in runtime will always be sandboxed.
+> Access to files, std::out or networking
+> will always need to be enabled explicitly with some `RuntimeModules`
