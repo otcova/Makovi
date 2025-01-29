@@ -15,7 +15,7 @@ Ordered descending priority, here are the goals
 - Compile time performance
 
 ## Inner Workings
-See [Inner Workings](/Inner_Workings.md) for more info.
+See [Inner Workings](/Inner_Workings.md#Compilation) for more info.
 
 # Language Features
 
@@ -207,9 +207,8 @@ Here are the memory models of popular languages with the drawbacks.
 Also, this would bring a lot of friction due to usually having to think about memory managment.
 
 
-By default, all arguments are passed by copy. This prevents the programmer from worrying if
-the function will change something. Also, passing data as a copy is usually very efficient since
-a COW mechanism is in place.
+By default, all arguments are passed by a deep copy.
+This prevents the programmer from worrying if the function will change the value of some argument.
 ```rust
 fn increment(x)
     x += 1
@@ -225,12 +224,30 @@ print("value = {value}")
 // value = 0
 ```
 
-When a reference is needed one can do it explicitly this way
+This does not mean that there's no mutability.
+Since the owner of a method will never be copied.
+For example, the function `push` mutates the array:
 ```rust
-increment(&value)
-print("Value = {value}")
-
-// This prints:
-// x = 1
-// value = 1
+let array = [1, 2, 3]
+array.push(4)
+print(array) // [1, 2, 3, 4]
 ```
+
+Passing data as a copy is usually very efficient.
+The compiler will do at least the following checks when data is passed as an argument.
+
+- Is data small: yes / no
+- Is the last use of the data: yes / no
+- Is it modified: never / sometimes / always
+- Is it stored: never / sometimes / always
+
+For types like `{x = 4, y = 2}`, since the data is so small (only two integers that could fit in two registers). A copy is always done since it will be faster than using a pointer.
+
+Here we have another example.
+`data` will be allocated on the heap, and the array will store only an owned pointer to it since it's the last use of data.
+```rust
+let data = "The truth is that you pay for your lifestyle in hours"
+array.push(data) // small: no, last use: yes, modified: never, stored: always
+```
+
+In other scenarios, smart pointers and mechanisms like COW might be used.
