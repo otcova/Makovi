@@ -1,3 +1,4 @@
+
 fn smallest_factor(number)
     if number mod 2 == 0
         return 2
@@ -6,7 +7,7 @@ fn smallest_factor(number)
     else if number mod 5 == 0
         return 5
 
-    factor = 7
+    let factor = 7
     while factor < number / 5
         if number mod factor == 0
             return factor
@@ -31,4 +32,4 @@ fn smallest_factor(number)
 
     return number
 
-return 123
+return smallest_factor(123)

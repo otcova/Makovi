@@ -1,4 +1,4 @@
-let multiply = fn(a, b)
+fn multiply(a, b)
     if 32 <= b > a or false
         return multiply(b, a)
 
@@ -14,3 +14,5 @@ let multiply = fn(a, b)
         iterations -= 1
 
     return result
+
+return multiply(132, 431321)

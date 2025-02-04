@@ -34,11 +34,13 @@ It is mainly implemented with the crate [logos](https://github.com/maciejhirsz/l
 All statements are transformed into simple instructions. This step will convert the token stream into nested simple instructions. To divide the expressions like `x % 2 == 0` into multiple instructions, temporal variables are assigned.
 
 The possible instructions are the following:
-- **Control flow:** `if vX`, `while vX`, `for vX in vY`
-- **Function call:** `vX = function_name(arg0, arg1, ...)`, `vX = vY.method_name(arg0, arg1, ...)`
 - **Function definition:** `fn "function_name" <number of parameters>`
+- **Function call:** `vX = function(arg0, arg1, ...)`, `vX = vY.method(arg0, arg1, ...)`
+- **Assignation:** `vX = value`
+- **Control flow:**
+`if vX`, `else if vX`, `else`, `while vX`, `for vX in vY`, `return vX`
 ```rust
-fn "greet_pair" 1
+fn "greet_pair" (v0)
     v1 = %(v0, 2)
     v2 = ==(v1, 0)
 
@@ -53,12 +55,15 @@ greet_pair(4)
 ## Stage 3 - Type inference
 The Type inference stage will assign types to all the variables and will also instantiate all the generic functions.
 
-The type inference consists in iterating the instructions in a function/module scope from top to bottom, and do the following.
+The type inference consists in iterating the instructions inside a function/module scope from top to bottom, and do the following.
 
 - **Case function definition:**
 The instruction is temporarily skipped. This is necessary because in the case of a generic function, we will need to know which types are being passed.
 
-- **Case function/method call:**
+- **Case assignation:**
+This one is straight forward. The variable is assigned the types of the value.
+
+- **Case function call:**
 A new type inference instance is started with the context of the called function and the types of the arguments. Once the type inference is done, we will know the return type of the function and therefore, assign it to the return value (if present).
 
 - **Case control flow:**
@@ -67,7 +72,7 @@ Here we only need to validate that the provided variable has the correct type. I
 In our example, the first analyzed instruction is `greet_pair(4)`. From there, we analyze `greet_pair<int>` and obtain the following result:
 
 ```rust
-fn "greet_pair" (int) -> null
+fn "greet_pair" (v0: int) -> null
     v1: int = %(v0, 2)
     v2: bool = ==(v1, 0)
 
@@ -92,17 +97,17 @@ The runtime is all the extra code that will run with the compiled source. The bu
 
 The runtime can also be extended with additional customizable modules (see [next section](#runtime-modules)). Since runtime modules provide extra types and functions, the compiler needs to know in advance in which runtime the code is supposed to run.
 
-Here is an example of who to compile and run code using the `DesktopRuntime`.
+Here is an example of who to compile and run code using the `DesktopModule`.
 
 ```rust
-// Define the runtime
-type DesktopRuntime = Runtime<DesktopModule>;
+// Initialize the runtime module
+let desktop_module = DesktopModule::default();
 
 // Instantiate the runtime and run the code
-let runtime = DesktopRuntime::default();
+let compiler = Compiler::new(desktop_module);
 
-let executable = runtime.compile(source_code);
-runtime.run(executable);
+let executable = compiler.compile(source_code);
+compiler.run(executable);
 ```
 
 > [!Note]

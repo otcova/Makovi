@@ -4,12 +4,25 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-logos = "0.15.0"
-peg = "0.8.4"
-cranelift = "0.115.0"
-cranelift-module = "0.115.0"
-cranelift-jit = "0.115.0"
-cranelift-native = "0.115.0"
+# Tokenizer
+logos = "0.15"
+
+# Backend
+cranelift = "0.116"
+cranelift-module = "0.116"
+cranelift-jit = "0.116"
+cranelift-native = "0.116"
+
+# Memory
+smallvec = "2.0.0-alpha"
+arrayvec = "0.7"
+
+# Utils
+derive_more = { version = "1", features = ["full"] }
+itertools = "0.14"
+
+[dev-dependencies]
+similar = "2.7"
 
 [profile.release]
 lto = "thin"
