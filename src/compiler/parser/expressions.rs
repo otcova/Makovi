@@ -64,7 +64,7 @@ impl FunctionParser<'_, '_> {
         let rhs = self.parse_expression_rhs::<false>(rhs, priority + 1);
 
         // TODO: Bench: Operators should have a pre assigned id.
-        let definition_id = self.module.declare(operator_name);
+        let definition_id = self.module.get_fn_id(operator_name);
         let result = self.function.new_variable();
         self.function
             .push_fn_call(definition_id, [lhs, rhs], Some(result));
@@ -91,7 +91,7 @@ impl FunctionParser<'_, '_> {
                             false => Some(self.function.new_variable()),
                         };
 
-                        let definition_id = self.module.declare(name);
+                        let definition_id = self.module.get_fn_id(name);
                         self.function.push_fn_call(definition_id, arguments, result);
 
                         result.into()
@@ -176,11 +176,11 @@ f0 = fn +(...) <not defined>
 f1 = fn -(...) <not defined>
 f2 = fn *(...) <not defined>
 f3 = fn test(v0, v1, v2)
-    v3 = f0(v0, v1)
-    v4 = f1(v3, 3)
-    v5 = f2(v2, 123)
-    v6 = f0(v5, 2)
-    v7 = f0(v4, v6)
+    v3 = local_f0(v0, v1)
+    v4 = local_f1(v3, 3)
+    v5 = local_f2(v2, 123)
+    v6 = local_f0(v5, 2)
+    v7 = local_f0(v4, v6)
 "#;
         test_parse_expression("a + b - 3 + (hey * 123 + 2)", &["a", "b", "hey"], RESULT);
     }
@@ -194,10 +194,10 @@ f1 = fn <(...) <not defined>
 f2 = fn >=(...) <not defined>
 f3 = fn and(...) <not defined>
 f4 = fn test(v0)
-    v1 = f0(3, 9)
-    v2 = f1(v0, v1)
-    v3 = f2(v1, 1)
-    v4 = f3(v2, v3)
+    v1 = local_f0(3, 9)
+    v2 = local_f1(v0, v1)
+    v3 = local_f2(v1, 1)
+    v4 = local_f3(v2, v3)
 "#;
         test_parse_expression("a < 3 + 9 >= 1", &["a"], RESULT);
     }

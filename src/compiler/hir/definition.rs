@@ -1,5 +1,6 @@
 use super::*;
 use derive_more::derive::{Deref, Display};
+use derive_more::From;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -50,7 +51,7 @@ impl Display for InstructionDisplay<'_, '_> {
                 }
 
                 let args = self.definition.get_arguments(call).iter().format(", ");
-                write!(f, "{}({args})", call.definition_id)
+                write!(f, "{}({args})", call.fn_id)
             }
             Instruction::Assign { variable, value } => write!(f, "{variable} = {value}"),
             Instruction::Return(variable) => write!(f, "return {variable}"),
@@ -88,7 +89,7 @@ pub enum RunIf {
 pub struct Call {
     /// If is_some, the function result is stored in the variable
     pub result: Option<VariableId>,
-    pub definition_id: FnDefinitionId,
+    pub fn_id: FnId,
 
     // TODO: Bench: Store only the offset and use `FnDefinition.parameters` for length
     // to reduce hir::Instruction size. Compere it with reducing usize types to u32
@@ -98,8 +99,18 @@ pub struct Call {
     pub call_id: usize,
 }
 
-#[derive(Deref, Clone, Copy, Eq, PartialEq, Hash, Display)]
-#[display("f{_0}")]
+#[derive(Debug, From, Clone, Copy, Eq, PartialEq, Hash, Display)]
+pub enum FnId {
+    Extern(ExternFnId),
+    Local(FnDefinitionId),
+}
+
+#[derive(Debug, Deref, From, Clone, Copy, Eq, PartialEq, Hash, Display, PartialOrd, Ord)]
+#[display("extern_f{_0}")]
+pub struct ExternFnId(usize);
+
+#[derive(Debug, Deref, Clone, Copy, Eq, PartialEq, Hash, Display, PartialOrd, Ord)]
+#[display("local_f{_0}")]
 pub struct FnDefinitionId(usize);
 
 /// A collection of defined functions
@@ -107,10 +118,10 @@ pub struct FnDefinitionId(usize);
 #[display("{}", definitions.iter().enumerate()
     .format_with("\n", |(id, def), f| f(&format_args!("f{id} = {def}"))))]
 pub struct ModuleDefinitions<'code> {
-    definitions: Vec<FnDefinitionStage<'code>>,
+    pub(super) definitions: Vec<FnDefinitionStage<'code>>,
 
     /// key: Name of a defined function
-    definitions_map: HashMap<&'code str, FnDefinitionId>,
+    pub(super) definitions_map: HashMap<&'code str, FnId>,
 }
 
 #[derive(Display)]
@@ -170,27 +181,29 @@ impl<'code> ModuleDefinitions<'code> {
             std::collections::hash_map::Entry::Vacant(vacant) => {
                 let id = FnDefinitionId(self.definitions.len());
                 self.definitions.push(FnDefinitionStage::Defined(def));
-                vacant.insert(id);
+                vacant.insert(id.into());
                 Ok(id)
             }
-            std::collections::hash_map::Entry::Occupied(entry) => {
-                let stage = &mut self.definitions[**entry.get()];
-                if matches!(stage, FnDefinitionStage::ToDefine { .. }) {
-                    *stage = FnDefinitionStage::Defined(def);
-                    Ok(*entry.get())
-                } else {
-                    Err(())
+            std::collections::hash_map::Entry::Occupied(entry) => match *entry.get() {
+                FnId::Extern(_) => Err(()),
+                FnId::Local(fn_definition_id) => {
+                    let stage = &mut self.definitions[*fn_definition_id];
+                    if matches!(stage, FnDefinitionStage::ToDefine { .. }) {
+                        *stage = FnDefinitionStage::Defined(def);
+                        Ok(fn_definition_id)
+                    } else {
+                        Err(())
+                    }
                 }
-            }
+            },
         }
     }
 
-    /// If the FnDefinition is not found, it's suposed that it will be defined later.
-    /// So a FnDefinitionId is assigned that currently points to an FnDefinitionStage::ToDefine.
-    pub fn declare(&mut self, name: &'code str) -> FnDefinitionId {
+    /// If the provided 'name' it's not registered, a new FnId will be assigned and returned.
+    pub fn get_fn_id(&mut self, name: &'code str) -> FnId {
         match self.definitions_map.entry(name) {
             std::collections::hash_map::Entry::Vacant(vacant) => {
-                let id = FnDefinitionId(self.definitions.len());
+                let id = FnDefinitionId(self.definitions.len()).into();
                 vacant.insert(id);
                 self.definitions.push(FnDefinitionStage::ToDefine { name });
                 id
@@ -205,10 +218,6 @@ impl<'code> Index<FnDefinitionId> for ModuleDefinitions<'code> {
     fn index(&self, index: FnDefinitionId) -> &Self::Output {
         &self.definitions[*index]
     }
-}
-
-impl FnDefinitionId {
-    pub const ENTRY_POINT: FnDefinitionId = FnDefinitionId(0);
 }
 
 impl<'a> FnDefinition<'a> {
@@ -254,7 +263,7 @@ impl<'a> FnDefinition<'a> {
 
     pub fn push_fn_call<A: IntoIterator<Item = Variable>>(
         &mut self,
-        definition_id: FnDefinitionId,
+        definition_id: FnId,
         args: A,
         result: Option<VariableId>,
     ) {
@@ -267,7 +276,7 @@ impl<'a> FnDefinition<'a> {
 
         self.push(Instruction::Call(Call {
             arguments: start..end,
-            definition_id,
+            fn_id: definition_id,
             result,
             call_id,
         }));

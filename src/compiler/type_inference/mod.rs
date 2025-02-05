@@ -1,21 +1,27 @@
 use super::error::{CompilationError, LineSpan};
 use super::*;
 use hir::*;
+use itertools::Itertools;
 use parser::ParserStage;
 
 pub struct TypeInferenceStage<'code, 'compiler> {
     pub errors: &'compiler mut CompilationErrorSet,
     pub code: CodeModule<'code>,
+    pub entry_point: FnDefinitionId,
 }
 
 impl<'code, 'compiler> ParserStage<'code, 'compiler> {
-    pub fn type_inference_stage(self) -> TypeInferenceStage<'code, 'compiler> {
+    pub fn type_inference_stage(
+        self,
+        extern_instances: ExternalInstances,
+    ) -> TypeInferenceStage<'code, 'compiler> {
         let mut stage = TypeInferenceStage {
             errors: self.errors,
             code: CodeModule {
                 definitions: self.definitions,
-                instances: ModuleInstances::default(),
+                instances: ModuleInstances::new(extern_instances),
             },
+            entry_point: self.entry_point,
         };
         stage.instantiate(self.entry_point);
         stage
@@ -30,7 +36,7 @@ impl TypeInferenceStage<'_, '_> {
             definition,
         } = self.code.instances.new_instance(
             &self.code.definitions,
-            definition_id,
+            definition_id.into(),
             ParamsTypes::default(),
         )
         else {
@@ -95,35 +101,46 @@ impl FunctionTypeInference<'_, '_> {
                     return;
                 };
 
-                let a = self.instances.new_instance(
+                let (instance_id, return_type) = match self.instances.new_instance(
                     self.definitions,
-                    call.definition_id,
+                    call.fn_id,
                     ParamsTypes(parameters),
-                );
-                let return_type = match a {
+                ) {
                     NewFnInstanceResult::New {
                         id: instance_id,
                         instance,
                         definition,
-                    } => FunctionTypeInference {
-                        definition,
-                        instance,
+                    } => (
                         instance_id,
-                        current_instruction: 0,
+                        FunctionTypeInference {
+                            definition,
+                            instance,
+                            instance_id,
+                            current_instruction: 0,
 
-                        errors: self.errors,
-                        definitions: self.definitions,
-                        instances: self.instances,
-                    }
-                    .analyse(),
-                    NewFnInstanceResult::Exists(FnInstanceStage::Ok(instance)) => {
-                        instance.return_type
-                    }
-                    NewFnInstanceResult::Exists(&FnInstanceStage::WithErrors { return_type }) => {
-                        return_type
-                    }
-                    NewFnInstanceResult::Exists(FnInstanceStage::WithFatalErrors) => {
-                        ValueType::Unknown
+                            errors: self.errors,
+                            definitions: self.definitions,
+                            instances: self.instances,
+                        }
+                        .analyse(),
+                    ),
+                    NewFnInstanceResult::Exists {
+                        id,
+                        stage: FnInstanceStage::Ok(instance),
+                    } => (id, instance.return_type),
+                    NewFnInstanceResult::Exists {
+                        id,
+                        stage: FnInstanceStage::WithErrors { return_type },
+                    } => (id, *return_type),
+                    NewFnInstanceResult::Exists {
+                        id,
+                        stage: FnInstanceStage::WithFatalErrors,
+                    } => (id, ValueType::Unknown),
+                    NewFnInstanceResult::Exists {
+                        id: _,
+                        stage: FnInstanceStage::BeeingCreated,
+                    } => {
+                        todo!("Type inference with recursive functions")
                     }
                     NewFnInstanceResult::UndefinedFunction { name } => {
                         self.errors.push(CompilationError {
@@ -132,8 +149,19 @@ impl FunctionTypeInference<'_, '_> {
                         });
                         return;
                     }
-                    NewFnInstanceResult::Exists(FnInstanceStage::BeeingCreated) => {
-                        todo!("Type inference with recursive functions");
+                    NewFnInstanceResult::UndefinedExternalInstance { fn_id } => {
+                        // TODO: Make this a execution time assertion if types are not defined
+                        // explicitly.
+                        let parameters = arguments.iter().map(|arg| self.instance.type_of(arg));
+                        self.errors.push(CompilationError {
+                            message: format!(
+                                "Built-in function {} does not accept the types: ({})",
+                                fn_id,
+                                parameters.format(", ")
+                            ),
+                            span: LineSpan::default(),
+                        });
+                        return;
                     }
                     NewFnInstanceResult::WrongArgumentCount { definition } => {
                         self.errors.push(CompilationError {
@@ -150,6 +178,7 @@ impl FunctionTypeInference<'_, '_> {
                 if let Some(variable) = call.result {
                     self.assign(variable, return_type);
                 }
+                self.instance.imported_instances.push(instance_id);
             }
             Instruction::Assign { variable, value } => {
                 self.assign(*variable, self.instance.type_of(value));

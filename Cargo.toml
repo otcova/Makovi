@@ -8,17 +8,17 @@ edition = "2021"
 logos = "0.15"
 
 # Backend
-cranelift = "0.116"
-cranelift-module = "0.116"
-cranelift-jit = "0.116"
-cranelift-native = "0.116"
+cranelift = "0"
+cranelift-module = "0"
+cranelift-jit = "0"
+cranelift-native = "0"
 
 # Memory
 smallvec = "2.0.0-alpha"
 arrayvec = "0.7"
 
 # Utils
-derive_more = { version = "1", features = ["full"] }
+derive_more = { version = "2.0", features = ["full"] }
 itertools = "0.14"
 
 [dev-dependencies]

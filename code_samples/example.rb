@@ -32,4 +32,4 @@ fn smallest_factor(number)
 
     return number
 
-return smallest_factor(123)
+return smallest_factor(8069 * 4373 * 4519)

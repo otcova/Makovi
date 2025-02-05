@@ -5,14 +5,18 @@ use smallvec::SmallVec;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::fmt::Write;
 use std::ops::Index;
+use std::ptr::NonNull;
 
 /// A function usually only has 2-3 parameters. This means that allocating a Vec
 /// only to store the types would be ridiculous overhead.
 /// (ValueType size = 1 byte, Vec size = 24 bytes).
 /// This struct stores the first N parameters in place, and in case of
 /// some absurd function it allocates the necesary memory.
-#[derive(From, Default, Deref, DerefMut, Clone, Display, Eq, PartialEq, Hash)]
+#[derive(
+    Debug, Default, Clone, Display, Eq, PartialEq, Hash, PartialOrd, Ord, From, Deref, DerefMut,
+)]
 #[display("({})", _0.iter().enumerate()
     .format_with(", ", |(i, ty), f| f(&format_args!("v{i}: {ty}"))))]
 pub struct ParamsTypes(pub SmallVec<ValueType, 16>);
@@ -20,27 +24,39 @@ pub struct ParamsTypes(pub SmallVec<ValueType, 16>);
 /// A collection of instanciated functions
 #[derive(Default)]
 pub struct ModuleInstances {
-    instances: Vec<FnInstanceStage>,
+    pub(super) instances: Vec<FnInstanceStage>,
 
     /// Value is none if the instance has been created but is beeing modifyied.
-    instances_map: HashMap<FnInstanceDeclaration, FnInstanceId>,
+    pub(super) local_instances_map: HashMap<LocalFnInstanceDeclaration, FnInstanceId>,
+
+    /// Value is none if the instance has been created but is beeing modifyied.
+    pub(super) extern_instances_map: HashMap<ExternFnInstanceDeclaration, FnInstanceId>,
 }
 
-#[derive(Eq, PartialEq, Hash, Display)]
-#[display("fn {definition_id}{parameters}")]
-pub struct FnInstanceDeclaration {
-    pub definition_id: FnDefinitionId,
+#[derive(Debug, Eq, PartialEq, Hash, Display, PartialOrd, Ord)]
+#[display("fn {}{parameters}", FnId::Local(*fn_id))]
+pub struct LocalFnInstanceDeclaration {
+    pub fn_id: FnDefinitionId,
+    pub parameters: ParamsTypes,
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Display, PartialOrd, Ord)]
+#[display("fn {}{parameters}", FnId::Extern(*fn_id))]
+pub struct ExternFnInstanceDeclaration {
+    pub fn_id: ExternFnId,
     pub parameters: ParamsTypes,
 }
 
 #[derive(Deref, Clone, Copy)]
-pub struct FnInstanceId(usize);
+pub struct FnInstanceId(pub(super) usize);
 
 pub struct FnInstance {
-    parameters: usize,
+    pub id: FnInstanceId,
+    pub parameters: usize,
     pub variables: Box<[ValueType]>,
     pub imported_instances: Vec<FnInstanceId>,
     pub return_type: ValueType,
+    pub external_ptr: Option<NonNull<u8>>,
 }
 
 impl FnInstance {
@@ -55,6 +71,17 @@ impl FnInstance {
     pub fn parameters(&self) -> &[ValueType] {
         &self.variables[0..self.parameters]
     }
+
+    pub fn name(&self, buffer: &mut String) {
+        buffer.clear();
+        write!(
+            buffer,
+            "f{}<{}>",
+            *self.id,
+            self.parameters().iter().format(", ")
+        )
+        .expect("Formating numbers shouldn't fail");
+    }
 }
 
 pub enum NewFnInstanceResult<'inst, 'def, 'code> {
@@ -65,12 +92,18 @@ pub enum NewFnInstanceResult<'inst, 'def, 'code> {
         definition: &'def FnDefinition<'code>,
     },
     // The instance already exists
-    Exists(&'inst FnInstanceStage),
+    Exists {
+        id: FnInstanceId,
+        stage: &'inst FnInstanceStage,
+    },
     WrongArgumentCount {
         definition: &'def FnDefinition<'code>,
     },
     UndefinedFunction {
         name: &'code str,
+    },
+    UndefinedExternalInstance {
+        fn_id: ExternFnId,
     },
 }
 
@@ -87,31 +120,55 @@ pub enum FnInstanceStage {
 }
 
 impl ModuleInstances {
-    /// Will return None if an instance can't be created due to syntax errors
     pub fn new_instance<'inst, 'def, 'code>(
         &'inst mut self,
         definitions: &'def ModuleDefinitions<'code>,
-        definition_id: FnDefinitionId,
+        fn_id: FnId,
         parameters: ParamsTypes,
     ) -> NewFnInstanceResult<'inst, 'def, 'code> {
-        let definition = match &definitions[definition_id] {
-            FnDefinitionStage::Defined(definition) => definition,
-            FnDefinitionStage::ToDefine { name } => {
-                return NewFnInstanceResult::UndefinedFunction { name };
-            }
-        };
-
-        if definition.parameters != parameters.len() {
-            return NewFnInstanceResult::WrongArgumentCount { definition };
+        match fn_id {
+            FnId::Extern(fn_id) => self.get_extern_instance(fn_id, parameters),
+            FnId::Local(fn_id) => self.new_local_instance(definitions, fn_id, parameters),
         }
+    }
 
-        let declaration = FnInstanceDeclaration {
-            definition_id,
-            parameters,
-        };
+    fn get_extern_instance<'def, 'code>(
+        &mut self,
+        fn_id: ExternFnId,
+        parameters: ParamsTypes,
+    ) -> NewFnInstanceResult<'_, 'def, 'code> {
+        let declaration = ExternFnInstanceDeclaration { fn_id, parameters };
 
-        match self.instances_map.entry(declaration) {
+        match self.extern_instances_map.entry(declaration) {
+            Entry::Vacant(_) => NewFnInstanceResult::UndefinedExternalInstance { fn_id },
+            Entry::Occupied(entry) => NewFnInstanceResult::Exists {
+                id: *entry.get(),
+                stage: &self.instances[**entry.get()],
+            },
+        }
+    }
+
+    fn new_local_instance<'inst, 'def, 'code>(
+        &'inst mut self,
+        definitions: &'def ModuleDefinitions<'code>,
+        fn_id: FnDefinitionId,
+        parameters: ParamsTypes,
+    ) -> NewFnInstanceResult<'inst, 'def, 'code> {
+        let parameters_len = parameters.len();
+        let declaration = LocalFnInstanceDeclaration { fn_id, parameters };
+
+        match self.local_instances_map.entry(declaration) {
             Entry::Vacant(entry) => {
+                let definition = match &definitions[fn_id] {
+                    FnDefinitionStage::Defined(definition) => definition,
+                    FnDefinitionStage::ToDefine { name } => {
+                        return NewFnInstanceResult::UndefinedFunction { name };
+                    }
+                };
+
+                if definition.parameters != parameters_len {
+                    return NewFnInstanceResult::WrongArgumentCount { definition };
+                }
                 let mut variables =
                     vec![ValueType::Unknown; definition.variables()].into_boxed_slice();
 
@@ -123,10 +180,12 @@ impl ModuleInstances {
                 entry.insert(id);
 
                 let instance = FnInstance {
+                    id,
                     parameters: arity,
                     variables,
                     imported_instances: Vec::new(),
                     return_type: ValueType::Unknown,
+                    external_ptr: None,
                 };
                 NewFnInstanceResult::New {
                     id,
@@ -134,8 +193,15 @@ impl ModuleInstances {
                     definition,
                 }
             }
-            Entry::Occupied(entry) => NewFnInstanceResult::Exists(&self.instances[**entry.get()]),
+            Entry::Occupied(entry) => NewFnInstanceResult::Exists {
+                id: *entry.get(),
+                stage: &self.instances[**entry.get()],
+            },
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.instances.is_empty()
     }
 
     pub fn len(&self) -> usize {
@@ -149,10 +215,14 @@ impl ModuleInstances {
             .map(|(i, f)| (FnInstanceId(i), f))
     }
 
-    pub fn iter_declarations(
+    /// Iter the function declarations of the module.
+    /// This are the ones that will be compiled by the backend.
+    pub fn iter_local_declarations(
         &self,
-    ) -> impl Iterator<Item = (FnInstanceId, &FnInstanceDeclaration)> {
-        self.instances_map.iter().map(|(decl, id)| (*id, decl))
+    ) -> impl Iterator<Item = (FnInstanceId, &LocalFnInstanceDeclaration)> {
+        self.local_instances_map
+            .iter()
+            .map(|(decl, id)| (*id, decl))
     }
 
     /// Will fail if the instance does not exist.
@@ -178,20 +248,17 @@ impl ModuleInstances {
         *stage = FnInstanceStage::Ok(instance);
     }
 
-    pub fn get_entry_point_id(&self) -> Option<FnInstanceId> {
-        let declaration = FnInstanceDeclaration {
-            definition_id: FnDefinitionId::ENTRY_POINT,
-            parameters: ParamsTypes::default(),
-        };
-        self.instances_map.get(&declaration).copied()
-    }
-
-    pub fn get_id(&self, name: FnDefinitionId, parameters: ParamsTypes) -> Option<FnInstanceId> {
-        let declaration = FnInstanceDeclaration {
-            definition_id: name,
-            parameters,
-        };
-        self.instances_map.get(&declaration).copied()
+    pub fn get_id(&self, fn_id: FnId, parameters: ParamsTypes) -> Option<FnInstanceId> {
+        match fn_id {
+            FnId::Extern(fn_id) => {
+                let declaration = ExternFnInstanceDeclaration { fn_id, parameters };
+                self.extern_instances_map.get(&declaration).copied()
+            }
+            FnId::Local(fn_id) => {
+                let declaration = LocalFnInstanceDeclaration { fn_id, parameters };
+                self.local_instances_map.get(&declaration).copied()
+            }
+        }
     }
 }
 
@@ -204,7 +271,12 @@ impl Index<FnInstanceId> for ModuleInstances {
 
 impl Display for ModuleInstances {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (declaration, id) in &self.instances_map {
+        let extern_instances = self
+            .extern_instances_map
+            .iter()
+            .sorted_unstable_by_key(|(decl, _)| *decl);
+
+        for (declaration, id) in extern_instances {
             // Name & Parameters
             write!(f, "{}", declaration)?;
 
@@ -226,6 +298,35 @@ impl Display for ModuleInstances {
                 writeln!(f, "    v{var}: {:?}", instance.variables[var])?;
             }
         }
+
+        let local_instances = self
+            .local_instances_map
+            .iter()
+            .sorted_unstable_by_key(|(decl, _)| *decl);
+
+        for (declaration, id) in local_instances {
+            // Name & Parameters
+            write!(f, "{}", declaration)?;
+
+            // Return
+            let instance = match &self.instances[**id] {
+                FnInstanceStage::BeeingCreated => return writeln!(f, " -> <in progress...>"),
+                FnInstanceStage::WithFatalErrors => return writeln!(f, " -> <compilation error>"),
+                FnInstanceStage::WithErrors { return_type } => {
+                    writeln!(f, " -> {return_type}")?;
+                    return writeln!(f, "    <compilation error>");
+                }
+                FnInstanceStage::Ok(instance) => instance,
+            };
+
+            writeln!(f, " -> {}", instance.return_type)?;
+
+            // Variables
+            for var in declaration.parameters.len()..instance.variables.len() {
+                writeln!(f, "    v{var}: {:?}", instance.variables[var])?;
+            }
+        }
+
         Ok(())
     }
 }

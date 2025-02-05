@@ -1,98 +1,95 @@
-f0 = fn mod(...) <not defined>
-f1 = fn ==(...) <not defined>
-f2 = fn /(...) <not defined>
-f3 = fn <(...) <not defined>
-f4 = fn +(...) <not defined>
-f5 = fn smallest_factor(v0)
-    v1 = f0(v0, 2)
-    v2 = f1(v1, 0)
+f0 = fn smallest_factor(v0)
+    v1 = extern_f3(v0, 2)
+    v2 = extern_f4(v1, 0)
     if v2 is true
     return 2
     else
-    v3 = f0(v0, 3)
-    v4 = f1(v3, 0)
+    v3 = extern_f3(v0, 3)
+    v4 = extern_f4(v3, 0)
     if v4 is true
     return 3
     else
-    v5 = f0(v0, 5)
-    v6 = f1(v5, 0)
+    v5 = extern_f3(v0, 5)
+    v6 = extern_f4(v5, 0)
     if v6 is true
     return 5
     endif x3
     v7 = 7
     loop
-    v8 = f2(v0, 5)
-    v9 = f3(v7, v8)
+    v8 = extern_f2(v0, 5)
+    v9 = extern_f5(v7, v8)
     if v9 is false
     break
     endif x1
-    v10 = f0(v0, v7)
-    v11 = f1(v10, 0)
+    v10 = extern_f3(v0, v7)
+    v11 = extern_f4(v10, 0)
     if v11 is true
     return v7
     else
-    v12 = f4(v7, 3)
-    v13 = f0(v0, v12)
-    v14 = f1(v13, 0)
+    v12 = extern_f1(v7, 3)
+    v13 = extern_f3(v0, v12)
+    v14 = extern_f4(v13, 0)
     if v14 is true
-    v15 = f4(v7, 3)
+    v15 = extern_f1(v7, 3)
     return v15
     else
-    v16 = f4(v7, 6)
-    v17 = f0(v0, v16)
-    v18 = f1(v17, 0)
+    v16 = extern_f1(v7, 6)
+    v17 = extern_f3(v0, v16)
+    v18 = extern_f4(v17, 0)
     if v18 is true
-    v19 = f4(v7, 6)
+    v19 = extern_f1(v7, 6)
     return v19
     else
-    v20 = f4(v7, 10)
-    v21 = f0(v0, v20)
-    v22 = f1(v21, 0)
+    v20 = extern_f1(v7, 10)
+    v21 = extern_f3(v0, v20)
+    v22 = extern_f4(v21, 0)
     if v22 is true
-    v23 = f4(v7, 10)
+    v23 = extern_f1(v7, 10)
     return v23
     else
-    v24 = f4(v7, 12)
-    v25 = f0(v0, v24)
-    v26 = f1(v25, 0)
+    v24 = extern_f1(v7, 12)
+    v25 = extern_f3(v0, v24)
+    v26 = extern_f4(v25, 0)
     if v26 is true
-    v27 = f4(v7, 12)
+    v27 = extern_f1(v7, 12)
     return v27
     else
-    v28 = f4(v7, 16)
-    v29 = f0(v0, v28)
-    v30 = f1(v29, 0)
+    v28 = extern_f1(v7, 16)
+    v29 = extern_f3(v0, v28)
+    v30 = extern_f4(v29, 0)
     if v30 is true
-    v31 = f4(v7, 16)
+    v31 = extern_f1(v7, 16)
     return v31
     else
-    v32 = f4(v7, 22)
-    v33 = f0(v0, v32)
-    v34 = f1(v33, 0)
+    v32 = extern_f1(v7, 22)
+    v33 = extern_f3(v0, v32)
+    v34 = extern_f4(v33, 0)
     if v34 is true
-    v35 = f4(v7, 22)
+    v35 = extern_f1(v7, 22)
     return v35
     else
-    v36 = f4(v7, 24)
-    v37 = f0(v0, v36)
-    v38 = f1(v37, 0)
+    v36 = extern_f1(v7, 24)
+    v37 = extern_f3(v0, v36)
+    v38 = extern_f4(v37, 0)
     if v38 is true
-    v39 = f4(v7, 24)
+    v39 = extern_f1(v7, 24)
     return v39
     else
-    v40 = f4(v7, 30)
-    v41 = f0(v0, v40)
-    v42 = f1(v41, 0)
+    v40 = extern_f1(v7, 30)
+    v41 = extern_f3(v0, v40)
+    v42 = extern_f4(v41, 0)
     if v42 is true
-    v43 = f4(v7, 30)
+    v43 = extern_f1(v7, 30)
     return v43
     else
-    v44 = f4(v7, 30)
+    v44 = extern_f1(v7, 30)
     v7 = v44
     endif x9
     endloop
     return v0
 
-f6 = fn ()
-    v0 = f5(123)
-    return v0
+f1 = fn ()
+    v0 = extern_f0(8069, 4373)
+    v1 = extern_f0(v0, 4519)
+    v2 = local_f0(v1)
+    return v2

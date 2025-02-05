@@ -1,11 +1,11 @@
-use super::hir::FnDefinitionStage;
+use super::hir::{FnDefinitionStage, ParamsTypes};
 use super::*;
 use backend_value::*;
 use compilation::*;
 use cranelift::codegen::ir::FuncRef;
 use cranelift::codegen::Context;
 use cranelift::prelude::*;
-use cranelift_module::{FuncId, Module};
+use cranelift_module::{FuncId, Linkage, Module};
 pub use executable::*;
 use type_inference::TypeInferenceStage;
 
@@ -22,7 +22,11 @@ impl<'compiler> TypeInferenceStage<'_, 'compiler> {
             return Err(self.errors);
         }
 
-        let Some(entry_point_id) = self.code.instances.get_entry_point_id() else {
+        let Some(entry_point_id) = self
+            .code
+            .instances
+            .get_id(self.entry_point.into(), ParamsTypes::default())
+        else {
             unreachable!("Only code with an entry point should be provided");
         };
         let hir::FnInstanceStage::Ok(entry_point_instance) = &self.code.instances[entry_point_id]
@@ -52,6 +56,7 @@ pub struct BackendCompiler {
     /// Used to temporally create a slice of value. For example, to store the
     /// arguments of a function call while the instruction is beeing builded.
     values_buffer: Vec<Value>,
+    name_buffer: String,
     if_scope_stack: Vec<IfScope>,
     loop_scope_stack: Vec<LoopScope>,
 }
@@ -67,6 +72,7 @@ impl BackendCompiler {
             func_ids: Default::default(),
             func_refs: Default::default(),
             values_buffer: Default::default(),
+            name_buffer: Default::default(),
             if_scope_stack: Default::default(),
             loop_scope_stack: Default::default(),
         }
@@ -103,9 +109,17 @@ impl BackendCompiler {
             self.load_signature(instance);
 
             let signature = &mut self.context.func.signature;
-            let Ok(id) = self.module.declare_anonymous_function(signature) else {
-                unreachable!("Invalid instance signature");
+
+            let linkage = match instance.external_ptr {
+                Some(_) => Linkage::Import,
+                None => Linkage::Export,
             };
+
+            instance.name(&mut self.name_buffer);
+            let id = self
+                .module
+                .declare_function(&self.name_buffer, linkage, signature)
+                .expect("Invalid instance signature");
 
             self.func_ids.push(id);
         }
@@ -114,8 +128,8 @@ impl BackendCompiler {
     fn compile(&mut self, code: &hir::CodeModule) {
         self.declare_functions(code);
 
-        for (instance, declaration) in code.instances.iter_declarations() {
-            let definition = match &code.definitions[declaration.definition_id] {
+        for (instance, declaration) in code.instances.iter_local_declarations() {
+            let definition = match &code.definitions[declaration.fn_id] {
                 FnDefinitionStage::Defined(definition) => definition,
                 FnDefinitionStage::ToDefine { name } => {
                     unreachable!("Found undefined function instance {name:?}");

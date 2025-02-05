@@ -1,1 +1,55 @@
-fn () -> Int
+fn extern_f0(v0: Int, v1: Int) -> Int
+fn extern_f1(v0: Int, v1: Int) -> Int
+fn extern_f2(v0: Int, v1: Int) -> Int
+fn extern_f3(v0: Int, v1: Int) -> Int
+fn extern_f4(v0: Int, v1: Int) -> Bool
+fn extern_f5(v0: Int, v1: Int) -> Bool
+fn local_f0(v0: Int) -> Int
+    v1: Int
+    v2: Bool
+    v3: Int
+    v4: Bool
+    v5: Int
+    v6: Bool
+    v7: Int
+    v8: Int
+    v9: Bool
+    v10: Int
+    v11: Bool
+    v12: Int
+    v13: Int
+    v14: Bool
+    v15: Int
+    v16: Int
+    v17: Int
+    v18: Bool
+    v19: Int
+    v20: Int
+    v21: Int
+    v22: Bool
+    v23: Int
+    v24: Int
+    v25: Int
+    v26: Bool
+    v27: Int
+    v28: Int
+    v29: Int
+    v30: Bool
+    v31: Int
+    v32: Int
+    v33: Int
+    v34: Bool
+    v35: Int
+    v36: Int
+    v37: Int
+    v38: Bool
+    v39: Int
+    v40: Int
+    v41: Int
+    v42: Bool
+    v43: Int
+    v44: Int
+fn local_f1() -> Int
+    v0: Int
+    v1: Int
+    v2: Int

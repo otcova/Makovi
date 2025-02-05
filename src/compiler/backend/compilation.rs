@@ -61,13 +61,13 @@ impl<'r> FnBackendCompiler<'r, '_> {
     }
 
     fn compile_instruction(&mut self, instruction: &hir::Instruction) -> Option<()> {
+        println!("Read: {}", instruction.display(self.definition));
         match instruction {
             hir::Instruction::Call(call) => {
-                let instance = self.instance.imported_instances[call.call_id];
+                // let instance = self.instance.imported_instances[call.call_id];
                 let arguments = self.definition.get_arguments(call);
 
-                let returned = self.call(instance, arguments);
-
+                let returned = self.call(call.call_id, arguments);
                 // - Store returned value
                 if let Some(variable) = call.result {
                     let variables = self.variables[*variable].variables();
@@ -76,7 +76,9 @@ impl<'r> FnBackendCompiler<'r, '_> {
 
                     for (index, var) in variables.into_iter().enumerate() {
                         let results = self.builder.inst_results(returned)[index];
+                        println!("Before");
                         self.builder.def_var(var, results);
+                        println!("After");
                     }
                 }
             }
@@ -147,28 +149,12 @@ impl<'r> FnBackendCompiler<'r, '_> {
         self.func_refs.clear();
 
         // TODO: See if it's better & possible to use `declare_func_in_data`
+        // to prevent declaring the same functions multiple times inside each function.
         for instance in &self.instance.imported_instances {
             let func_id = self.func_ids[**instance];
             let func_ref = self.module.declare_func_in_func(func_id, self.builder.func);
             self.func_refs.push(func_ref);
         }
-
-        // TODO: Decide what to do with this cranelift investigation
-        // let fn_ref = {
-        //     let signature: ir::Signature = ();
-        //     let name = ir::UserExternalName {
-        //         namespace: 1,
-        //         index: 0,
-        //     };
-        //
-        //     let sig_ref = self.builder.func.import_signature(signature);
-        //     let name_ref = self.builder.func.declare_imported_user_function(name);
-        //     self.builder.func.import_function(ir::ExtFuncData {
-        //         name: ir::ExternalName::user(name_ref),
-        //         signature: sig_ref,
-        //         colocated: false,
-        //     })
-        // };
     }
 
     fn finalize(mut self) {
@@ -192,7 +178,7 @@ impl<'r> FnBackendCompiler<'r, '_> {
     fn jump(&mut self, block: Block) {
         self.ins().jump(block, &[]);
         self.instruction_flow = InstructionFlow::Terminated;
-        self.skip_scope();
+        // self.skip_scope();
     }
 
     /// `instruction_flow` will be followed by the then block
@@ -214,17 +200,14 @@ impl<'r> FnBackendCompiler<'r, '_> {
         let value = self.use_var(value);
         self.ins().return_(&value.values());
         self.instruction_flow = InstructionFlow::Terminated;
+        self.skip_scope();
     }
 
     /// `instruction_flow` is always terminated with lable as the successor
     fn set_flow_label(&mut self, label: Block) {
         match self.instruction_flow {
             InstructionFlow::Terminated => {}
-            InstructionFlow::CleanStart(label) => {
-                self.builder.seal_block(label);
-                self.ins().jump(label, &[]);
-            }
-            InstructionFlow::Dirty => {
+            InstructionFlow::CleanStart(_) | InstructionFlow::Dirty => {
                 self.ins().jump(label, &[]);
             }
         }
@@ -239,13 +222,15 @@ impl<'r> FnBackendCompiler<'r, '_> {
         match self.instruction_flow {
             InstructionFlow::Terminated => None,
             InstructionFlow::CleanStart(label) => {
-                // The returned label will be sealed by the caller.
+                // The label will be sealed by the caller.
                 self.instruction_flow = InstructionFlow::Dirty;
                 Some(label)
             }
             InstructionFlow::Dirty => {
                 let label = self.builder.create_block();
-                self.set_flow_label(label);
+                self.ins().jump(label, &[]);
+                self.builder.switch_to_block(label);
+                self.instruction_flow = InstructionFlow::Dirty;
                 Some(label)
             }
         }
@@ -285,11 +270,12 @@ impl<'r> FnBackendCompiler<'r, '_> {
     }
 
     fn loop_end(&mut self) {
+        let scope = self.loop_scope_stack.pop().expect("Incorrect loop scope");
+
         if self.instruction_flow != InstructionFlow::Terminated {
-            self.loop_continue();
+            self.jump(scope.start_label);
         }
 
-        let scope = self.loop_scope_stack.pop().expect("Incorrect loop scope");
         self.builder.seal_block(scope.start_label);
         if let Some(end_label) = scope.end_label.expand() {
             self.set_flow_label(end_label);
@@ -307,11 +293,7 @@ impl<'r> FnBackendCompiler<'r, '_> {
         scope.end_label = end_block.into();
 
         self.jump(end_block);
-    }
-
-    fn loop_continue(&mut self) {
-        let scope = self.loop_scope_stack.last().expect("Incorrect loop scope");
-        self.jump(scope.start_label);
+        self.skip_scope();
     }
 
     fn use_var_id(&mut self, id: hir::VariableId) -> BackendValue {
@@ -344,6 +326,10 @@ impl<'r> FnBackendCompiler<'r, '_> {
 
     fn assign(&mut self, variable: hir::VariableId, value: &hir::Variable) {
         let value = self.use_var(value);
+        self.assign_value(variable, value);
+    }
+
+    fn assign_value(&mut self, variable: hir::VariableId, value: BackendValue) {
         match self.variables[*variable] {
             BackendVariable::Null => value.expect_null(),
             BackendVariable::Int(var) => self.builder.def_var(var, value.expect_int()),
@@ -353,7 +339,7 @@ impl<'r> FnBackendCompiler<'r, '_> {
 
     fn call<'a, A: IntoIterator<Item = &'a hir::Variable>>(
         &mut self,
-        fn_id: hir::FnInstanceId,
+        imported_fn_id: usize,
         arguments: A,
     ) -> Inst {
         // - Prepare arguments
@@ -363,7 +349,7 @@ impl<'r> FnBackendCompiler<'r, '_> {
         buffer.extend(arguments.into_iter().flat_map(|v| self.use_var(v).values()));
 
         // - Get FuncRef
-        let fn_ref = self.func_refs[*fn_id];
+        let fn_ref = self.func_refs[imported_fn_id];
 
         // - Call
         // TODO: Possible optimization: Use `call_return` if followed by a return
@@ -376,10 +362,18 @@ impl<'r> FnBackendCompiler<'r, '_> {
     }
 
     fn ins(&mut self) -> FuncInstBuilder<'_, 'r> {
+        if self.instruction_flow == InstructionFlow::Terminated {
+            let block = self.builder.create_block();
+            self.builder.switch_to_block(block);
+            self.builder.seal_block(block);
+            self.instruction_flow = InstructionFlow::Dirty;
+        }
+
         if let InstructionFlow::CleanStart(block) = self.instruction_flow {
             self.builder.seal_block(block);
             self.instruction_flow = InstructionFlow::Dirty;
         }
+
         self.builder.ins()
     }
 
@@ -389,28 +383,31 @@ impl<'r> FnBackendCompiler<'r, '_> {
         let mut nested_scopes: usize = 0;
 
         while let Some(instruction) = self.instructions.next() {
+            println!("Skip: {}", instruction.display(self.definition));
             match instruction {
                 hir::Instruction::Call(_)
                 | hir::Instruction::Assign { .. }
                 | hir::Instruction::Return(_)
-                | hir::Instruction::Else
                 | hir::Instruction::Break => {}
+
+                hir::Instruction::Else => {
+                    if nested_scopes == 0 {
+                        self.compile_instruction(instruction);
+                        return;
+                    }
+                }
 
                 hir::Instruction::IfStart(_, _) | hir::Instruction::LoopStart => {
                     nested_scopes += 1;
                 }
 
                 &hir::Instruction::IfEnd(size) => {
-                    if nested_scopes < size {
-                        panic!("Invalid scope");
+                    if nested_scopes <= size {
+                        self.compile_instruction(&hir::Instruction::IfEnd(size - nested_scopes));
+                        return;
                     }
 
                     nested_scopes -= size;
-
-                    if nested_scopes == 0 {
-                        self.compile_instruction(instruction);
-                        return;
-                    }
                 }
 
                 hir::Instruction::LoopEnd => {
@@ -423,6 +420,7 @@ impl<'r> FnBackendCompiler<'r, '_> {
                 }
             }
         }
+        self.instruction_flow = InstructionFlow::Terminated;
 
         assert!(nested_scopes == 0);
     }

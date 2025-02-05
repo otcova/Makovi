@@ -19,12 +19,13 @@ impl<'code> LexerStage<'code> {
     pub fn parser_stage<'compiler>(
         mut self,
         errors: &'compiler mut CompilationErrorSet,
+        external_definitions: ExternalDefinitions,
     ) -> ParserStage<'code, 'compiler> {
         while self.lexer.token() == Token::NewLine {
             self.lexer.next();
         }
 
-        let mut module = ModuleDefinitions::default();
+        let mut module = ModuleDefinitions::new(external_definitions);
         let mut parser = FunctionParser {
             lexer: &mut self.lexer,
             function: FnDefinition::new("", 0),

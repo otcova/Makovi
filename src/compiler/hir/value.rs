@@ -10,7 +10,7 @@ pub enum Variable {
     Const(Value),
 }
 
-#[derive(Debug, Display, Clone)]
+#[derive(Debug, Display, Clone, PartialEq, Eq)]
 pub enum Value {
     #[display("null")]
     Null,
@@ -18,7 +18,7 @@ pub enum Value {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, Display, PartialOrd, Ord)]
 pub enum ValueType {
     /// Used when a compilation error has prevented the compiler to know the type
     // TODO: Consider if this variant can be removed (not needed) when using SSA.
